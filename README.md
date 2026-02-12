@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portaria CarpeDiem (Next.js + Supabase)
 
-## Getting Started
+Sistema de portaria com autenticação administrativa, cadastro de moradores e controle completo de encomendas.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router (em `src/app`)
+- APIs internas em Route Handlers (`src/app/api/...`)
+- Supabase Postgres via REST (`/rest/v1`)
+- Proteção de rotas com `middleware.ts`
+
+## Funcionalidades
+
+- Login via `ADMIN_USER` e `ADMIN_PASS`
+- Dashboard protegido
+- CRUD de moradores
+- CRUD de encomendas
+- Fluxo de entrega de encomenda
+- Geração de link de WhatsApp para avisar morador
+
+## Configuração
+
+1. Instale dependências:
+
+```bash
+npm install
+```
+
+2. Crie o `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Preencha as variáveis (`ADMIN_USER`, `ADMIN_PASS`, `AUTH_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+
+4. Crie as tabelas no Supabase executando o SQL abaixo (`supabase/schema.sql`).
+
+5. Execute o projeto:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estrutura principal
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/login`
+- `/dashboard` (protegido)
+- `/dashboard/moradores`
+- `/dashboard/encomendas`
+- `/dashboard/encomendas/new`
+- `/dashboard/encomendas/[id]/deliver`
+- `/dashboard/encomendas/[id]/whatsapp`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## APIs
 
-## Learn More
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET, POST /api/moradores`
+- `PATCH, DELETE /api/moradores/[id]`
+- `GET, POST /api/encomendas`
+- `GET, PATCH, DELETE /api/encomendas/[id]`
+- `POST /api/encomendas/[id]/deliver`
+- `POST /api/encomendas/[id]/whatsapp`
 
-To learn more about Next.js, take a look at the following resources:
+## Produção
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Configure variáveis de ambiente na plataforma de deploy.
+- Use HTTPS para garantir cookie `secure` em produção.
+- Restrinja acesso da `SUPABASE_SERVICE_ROLE_KEY` somente no backend (já aplicado neste projeto).
