@@ -15,15 +15,17 @@ export default function DeliverPage() {
   };
 
   return (
-    <main className="container">
+    <main className="container dashboard-layout">
       <DashboardNav />
-      <div className="card">
-        <h1 style={{ marginTop: 0 }}>Confirmar entrega</h1>
-        <p>Deseja marcar esta encomenda como entregue?</p>
-        <button className="button button-primary" onClick={confirmDelivery}>
-          Confirmar entrega
-        </button>
-      </div>
+      <section className="dashboard-content">
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Confirmar entrega</h2>
+          <p>Deseja marcar esta encomenda como entregue?</p>
+          <button className="button button-primary" onClick={confirmDelivery}>
+            Confirmar entrega
+          </button>
+        </div>
+      </section>
     </main>
   );
 }

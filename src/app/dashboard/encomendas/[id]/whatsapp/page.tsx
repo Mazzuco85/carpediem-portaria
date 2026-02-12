@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { Toast } from "@/components/toast";
 
 export default function WhatsappPage() {
   const params = useParams<{ id: string }>();
@@ -26,19 +27,21 @@ export default function WhatsappPage() {
   }, [params.id]);
 
   return (
-    <main className="container">
+    <main className="container dashboard-layout">
       <DashboardNav />
-      <div className="card">
-        <h1 style={{ marginTop: 0 }}>Notificação por WhatsApp</h1>
-        {error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
-        {link ? (
-          <a className="button button-primary" href={link} target="_blank" rel="noreferrer">
-            Abrir WhatsApp
-          </a>
-        ) : (
-          <p>Gerando link...</p>
-        )}
-      </div>
+      <section className="dashboard-content">
+        <Toast message={error} type="error" onClose={() => setError(null)} />
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Notificação por WhatsApp</h2>
+          {link ? (
+            <a className="button button-primary" href={link} target="_blank" rel="noreferrer">
+              Abrir WhatsApp
+            </a>
+          ) : (
+            <p>Gerando link...</p>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

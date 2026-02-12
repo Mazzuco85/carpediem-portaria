@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { Toast } from "@/components/toast";
 import type { Morador } from "@/lib/types";
 
 export default function NewEncomendaPage() {
@@ -43,40 +44,42 @@ export default function NewEncomendaPage() {
   };
 
   return (
-    <main className="container">
+    <main className="container dashboard-layout">
       <DashboardNav />
-      <div className="card">
-        <h1 style={{ marginTop: 0 }}>Nova encomenda</h1>
-        <form onSubmit={submit} style={{ display: "grid", gap: "0.7rem" }}>
-          <div>
-            <label htmlFor="morador_id">Morador</label>
-            <select name="morador_id" id="morador_id" required>
-              <option value="">Selecione...</option>
-              {moradores.map((morador) => (
-                <option key={morador.id} value={morador.id}>
-                  {morador.nome} - Apt {morador.apartamento}/{morador.bloco}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="descricao">Descrição</label>
-            <input id="descricao" name="descricao" required />
-          </div>
-          <div>
-            <label htmlFor="codigo_rastreio">Código de rastreio</label>
-            <input id="codigo_rastreio" name="codigo_rastreio" />
-          </div>
-          <div>
-            <label htmlFor="observacoes">Observações</label>
-            <textarea id="observacoes" name="observacoes" rows={4} />
-          </div>
-          {error ? <p style={{ color: "#dc2626", margin: 0 }}>{error}</p> : null}
-          <button className="button button-primary" type="submit">
-            Salvar encomenda
-          </button>
-        </form>
-      </div>
+      <section className="dashboard-content">
+        <Toast message={error} type="error" onClose={() => setError(null)} />
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Nova encomenda</h2>
+          <form onSubmit={submit} style={{ display: "grid", gap: "0.7rem" }}>
+            <div>
+              <label htmlFor="morador_id">Morador</label>
+              <select name="morador_id" id="morador_id" required>
+                <option value="">Selecione...</option>
+                {moradores.map((morador) => (
+                  <option key={morador.id} value={morador.id}>
+                    {morador.nome} - Apt {morador.apartamento}/{morador.bloco}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="descricao">Descrição</label>
+              <input id="descricao" name="descricao" required />
+            </div>
+            <div>
+              <label htmlFor="codigo_rastreio">Código de rastreio</label>
+              <input id="codigo_rastreio" name="codigo_rastreio" />
+            </div>
+            <div>
+              <label htmlFor="observacoes">Observações</label>
+              <textarea id="observacoes" name="observacoes" rows={4} />
+            </div>
+            <button className="button button-primary" type="submit">
+              Salvar encomenda
+            </button>
+          </form>
+        </div>
+      </section>
     </main>
   );
 }
