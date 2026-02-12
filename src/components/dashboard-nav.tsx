@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const links = [
-  { href: "/dashboard", label: "Visão geral" },
-  { href: "/dashboard/moradores", label: "Moradores" },
-  { href: "/dashboard/encomendas", label: "Encomendas" },
-  { href: "/dashboard/encomendas/new", label: "Nova encomenda" },
+  { href: "/dashboard", label: "Visão geral", icon: "🏠" },
+  { href: "/dashboard/moradores", label: "Moradores", icon: "👥" },
+  { href: "/dashboard/encomendas", label: "Encomendas", icon: "📦" },
+  { href: "/dashboard/encomendas/new", label: "Nova encomenda", icon: "➕" },
 ];
 
 export function DashboardNav() {
@@ -21,22 +21,27 @@ export function DashboardNav() {
   };
 
   return (
-    <div className="card" style={{ marginBottom: "1rem" }}>
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="button button-secondary"
-            style={{ background: pathname === link.href ? "#bfdbfe" : undefined }}
-          >
-            {link.label}
-          </Link>
-        ))}
-        <button onClick={logout} className="button button-danger" style={{ marginLeft: "auto" }}>
-          Sair
+    <>
+      <header className="app-header card">
+        <div>
+          <p className="app-subtitle">Portaria CarpeDiem</p>
+          <h1 className="app-title">Painel administrativo</h1>
+        </div>
+        <button onClick={logout} className="button button-danger" type="button">
+          ⎋ Logout
         </button>
-      </div>
-    </div>
+      </header>
+      <aside className="sidebar card">
+        {links.map((link) => {
+          const isActive = pathname === link.href;
+          return (
+            <Link key={link.href} href={link.href} className={`sidebar-link ${isActive ? "active" : ""}`}>
+              <span aria-hidden="true">{link.icon}</span>
+              {link.label}
+            </Link>
+          );
+        })}
+      </aside>
+    </>
   );
 }
