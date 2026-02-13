@@ -5,7 +5,7 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
 import type { Morador } from "@/lib/types";
 
-const initialForm = { nome: "", unidade: "", apto: "", torre: "", telefone: "" };
+const initialForm = { nome: "", unidade: "", torre: "", apto: "", telefone: "" };
 
 type ToastState = {
   message: string;
@@ -104,12 +104,12 @@ export default function MoradoresPage() {
             </div>
             <div className="form-row">
               <div>
-                <label htmlFor="apto">Apto</label>
-                <input id="apto" placeholder="Ex: 101" value={form.apto} onChange={(e) => setForm({ ...form, apto: e.target.value })} required />
-              </div>
-              <div>
                 <label htmlFor="torre">Torre</label>
                 <input id="torre" placeholder="Ex: A" value={form.torre} onChange={(e) => setForm({ ...form, torre: e.target.value })} required />
+              </div>
+              <div>
+                <label htmlFor="apto">Apto</label>
+                <input id="apto" placeholder="Ex: 101" value={form.apto} onChange={(e) => setForm({ ...form, apto: e.target.value })} required />
               </div>
             </div>
             <div>
