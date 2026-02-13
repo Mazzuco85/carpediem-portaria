@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CdMonogram } from "@/components/cd-monogram";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,39 +14,28 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     setError(null);
-
     const formData = new FormData(event.currentTarget);
 
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: formData.get("username"),
-        password: formData.get("password"),
-      }),
+      body: JSON.stringify({ username: formData.get("username"), password: formData.get("password") }),
     });
 
     setLoading(false);
-
-    if (!response.ok) {
-      setError("Usuário ou senha inválidos.");
-      return;
-    }
-
+    if (!response.ok) return setError("Usuário ou senha inválidos.");
     router.push("/dashboard");
     router.refresh();
   };
 
   return (
     <main className="login-shell">
-      <div className="card login-card">
+      <div className="card login-card glass-panel">
         <div className="login-logo">
-          <Image src="/logo.png" alt="Logo CarpeDiem" width={42} height={42} className="brand-logo" priority />
+          <CdMonogram size={56} />
           <div>
-            <h1 style={{ margin: 0 }}>Portaria CarpeDiem</h1>
-            <p className="page-intro" style={{ marginBottom: 0 }}>
-              Acesse o painel premium da portaria
-            </p>
+            <h1 style={{ margin: 0 }}>CarpeDiem Residences | Portaria</h1>
+            <p className="page-intro" style={{ marginBottom: 0 }}>Acesse a operação premium da portaria.</p>
           </div>
         </div>
         <form onSubmit={onSubmit} className="form-grid">
@@ -64,9 +53,7 @@ export default function LoginPage() {
             </div>
           </div>
           {error ? <div className="banner">{error}</div> : null}
-          <button disabled={loading} className="button button-primary" type="submit">
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
+          <button disabled={loading} className="button button-primary" type="submit">{loading ? "Entrando..." : "Entrar"}</button>
         </form>
       </div>
     </main>

@@ -9,14 +9,16 @@ import type { Morador } from "@/lib/types";
 export default function NewEncomendaPage() {
   const router = useRouter();
   const [moradores, setMoradores] = useState<Morador[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [loadingMoradores, setLoadingMoradores] = useState(true);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [codigo, setCodigo] = useState("");
 
   useEffect(() => {
     fetch("/api/moradores", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setMoradores)
-      .catch(() => setError("Não foi possível carregar moradores para seleção."))
+      .catch(() => setToast({ message: "Não foi possível carregar moradores para seleção.", type: "error" }))
       .finally(() => setLoadingMoradores(false));
   }, []);
 
@@ -35,27 +37,30 @@ export default function NewEncomendaPage() {
       }),
     });
 
-    if (!response.ok) {
-      setError("Não foi possível criar encomenda.");
-      return;
-    }
-
-    router.push("/dashboard/encomendas");
-    router.refresh();
+    if (!response.ok) return setToast({ message: "Não foi possível criar encomenda.", type: "error" });
+    setToast({ message: "Encomenda cadastrada com sucesso.", type: "success" });
+    setTimeout(() => {
+      router.push("/dashboard/encomendas");
+      router.refresh();
+    }, 500);
   };
 
   return (
     <main className="container dashboard-layout">
       <DashboardNav />
       <section className="dashboard-content">
-        <Toast message={error} type="error" onClose={() => setError(null)} />
-        <div className="card">
-          <h2>Nova encomenda</h2>
-          <p className="page-intro">Registre encomendas recebidas para controle da portaria.</p>
+        <Toast message={toast?.message ?? null} type={toast?.type} onClose={() => setToast(null)} />
+        <div className="glass-panel card">
+          <div className="section-header">
+            <div>
+              <h2>Nova encomenda</h2>
+              <p className="page-intro">Registro rápido com leitura assistida de rastreio.</p>
+            </div>
+            <button className="button button-secondary" onClick={() => setScannerOpen(true)}>Abrir scanner</button>
+          </div>
+
           {loadingMoradores ? <div className="loading-state">Carregando moradores...</div> : null}
-          {!loadingMoradores && moradores.length === 0 ? (
-            <div className="empty-state">Nenhum morador cadastrado para vincular encomendas.</div>
-          ) : null}
+          {!loadingMoradores && moradores.length === 0 ? <div className="empty-state">Nenhum morador cadastrado para vincular encomendas.</div> : null}
 
           <form onSubmit={submit} className="form-grid">
             <div>
@@ -75,7 +80,7 @@ export default function NewEncomendaPage() {
             </div>
             <div>
               <label htmlFor="codigo_rastreio">Código de rastreio</label>
-              <input id="codigo_rastreio" name="codigo_rastreio" />
+              <input id="codigo_rastreio" name="codigo_rastreio" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
             </div>
             <div>
               <label htmlFor="observacoes">Observações</label>
@@ -87,6 +92,20 @@ export default function NewEncomendaPage() {
           </form>
         </div>
       </section>
+
+      {scannerOpen ? (
+        <div className="modal-backdrop">
+          <div className="modal glass-panel">
+            <h2>Scanner de rastreio</h2>
+            <p className="page-intro">Use um leitor de código de barras conectado e cole o código abaixo.</p>
+            <input value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Código de rastreio" autoFocus />
+            <div className="actions-row" style={{ marginTop: "1rem" }}>
+              <button className="button button-primary" onClick={() => setScannerOpen(false)}>Aplicar código</button>
+              <button className="button button-secondary" onClick={() => setScannerOpen(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
