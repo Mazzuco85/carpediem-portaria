@@ -3,9 +3,10 @@ create extension if not exists "pgcrypto";
 create table if not exists public.moradores (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
-  apartamento text not null,
-  bloco text not null,
   telefone text,
+  unidade text,
+  torre text not null,
+  apto text not null,
   created_at timestamptz not null default now()
 );
 

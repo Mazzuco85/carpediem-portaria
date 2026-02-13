@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const [encomenda] = await supabaseRest<Encomenda[]>("encomendas", {
       query: {
-        select: "*,moradores(id,nome,apartamento,bloco,telefone)",
+        select: "*,moradores(id,nome,unidade,apto,torre,telefone)",
         id: `eq.${id}`,
       },
     });
@@ -22,7 +22,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const phone = encomenda.moradores.telefone.replace(/\D/g, "");
-    const message = `Olá ${encomenda.moradores.nome}, sua encomenda (${encomenda.descricao}) chegou na portaria. Apartamento ${encomenda.moradores.apartamento}/${encomenda.moradores.bloco}.`;
+    const unidadeLabel = encomenda.moradores.unidade ? `${encomenda.moradores.unidade} · ` : "";
+    const message = `Olá ${encomenda.moradores.nome}, sua encomenda (${encomenda.descricao}) chegou na portaria. Apartamento ${unidadeLabel}${encomenda.moradores.apto}/${encomenda.moradores.torre}.`;
 
     return NextResponse.json({
       link: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,

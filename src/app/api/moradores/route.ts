@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
       query: { select: "*", order: "created_at.desc" },
     });
     return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Não foi possível carregar moradores agora. Tente novamente." }, { status: 500 });
   }
 }
 
@@ -22,9 +22,11 @@ export async function POST(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const body = await request.json().catch(() => null);
+  const apto = body?.apto ?? body?.apartamento;
+  const torre = body?.torre ?? body?.bloco;
 
-  if (!body?.nome || !body?.apartamento || !body?.bloco) {
-    return NextResponse.json({ error: "nome, apartamento e bloco são obrigatórios." }, { status: 400 });
+  if (!body?.nome || !apto || !torre) {
+    return NextResponse.json({ error: "nome, apto e torre são obrigatórios." }, { status: 400 });
   }
 
   try {
@@ -32,14 +34,15 @@ export async function POST(request: NextRequest) {
       method: "POST",
       body: {
         nome: String(body.nome),
-        apartamento: String(body.apartamento),
-        bloco: String(body.bloco),
+        unidade: body.unidade ? String(body.unidade) : null,
+        apto: String(apto),
+        torre: String(torre),
         telefone: body.telefone ? String(body.telefone) : null,
       },
     });
 
     return NextResponse.json(created, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Não foi possível cadastrar este morador." }, { status: 500 });
   }
 }

@@ -1,8 +1,9 @@
 export type Morador = {
   id: string;
   nome: string;
-  apartamento: string;
-  bloco: string;
+  unidade: string | null;
+  apto: string;
+  torre: string;
   telefone: string | null;
   created_at: string;
 };
@@ -19,5 +20,5 @@ export type Encomenda = {
   recebido_em: string;
   entregue_em: string | null;
   created_at: string;
-  moradores?: Pick<Morador, "id" | "nome" | "apartamento" | "bloco" | "telefone">;
+  moradores?: Pick<Morador, "id" | "nome" | "unidade" | "apto" | "torre" | "telefone">;
 };
