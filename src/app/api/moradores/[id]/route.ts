@@ -9,20 +9,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const body = await request.json().catch(() => null);
   const { id } = await params;
+  const nome = body?.nome ? String(body.nome) : "";
+  const unidade = body?.unidade ? String(body.unidade) : null;
+  const apto = body?.apto ? String(body.apto) : "";
+  const torre = body?.torre ? String(body.torre) : "";
+  const telefone = body?.telefone ? String(body.telefone) : null;
 
-  const apto = body?.apto ?? body?.apartamento;
-  const torre = body?.torre ?? body?.bloco;
+  if (!nome || !apto || !torre) {
+    return NextResponse.json({ error: "nome, apto e torre são obrigatórios." }, { status: 400 });
+  }
 
   try {
     const [updated] = await supabaseRest<Morador[]>("moradores", {
       method: "PATCH",
       query: { id: `eq.${id}` },
       body: {
-        nome: body?.nome,
-        unidade: body?.unidade ?? null,
+        nome,
+        unidade,
         apto,
         torre,
-        telefone: body?.telefone ?? null,
+        telefone,
       },
     });
 
