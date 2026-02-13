@@ -1,65 +1,39 @@
-import Link from "next/link";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { DashboardOverview, type Shortcut } from "@/components/dashboard-overview";
 
-const MORADORES_ROUTE = "/dashboard/moradores";
-const ENCOMENDAS_ROUTE = "/dashboard/encomendas";
-const NOVA_ENCOMENDA_ROUTE = "/dashboard/encomendas/new";
+function toTitle(segment: string) {
+  return segment
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(" ");
+}
 
-const kpis = [
-  {
-    icon: "👥",
-    label: "Cadastro",
-    title: "Moradores",
-    description: "Atualize moradores e informações de contato.",
-    href: "/dashboard/moradores",
-    cta: "Gerenciar Moradores",
-  },
-  {
-    icon: "📦",
-    label: "Operação",
-    title: "Encomendas",
-    description: "Acompanhe recebimentos e entregas pendentes.",
-    href: "/dashboard/encomendas",
-    cta: "Ver Encomendas",
-  },
-  {
-    icon: "⚡",
-    label: "Atalho",
-    title: "Nova entrada",
-    description: "Registre rapidamente uma nova encomenda.",
-    href: "/dashboard/nova-encomenda",
-    cta: "Cadastrar Encomenda",
-  },
-];
+async function loadShortcuts(): Promise<Shortcut[]> {
+  const base = join(process.cwd(), "src/app/dashboard");
+  const entries = await readdir(base, { withFileTypes: true });
+  const shortcuts: Shortcut[] = [];
 
-export default function DashboardPage() {
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith("[")) continue;
+    const children = await readdir(join(base, entry.name));
+    if (!children.includes("page.tsx")) continue;
+    const href = `/dashboard/${entry.name}`;
+    shortcuts.push({ href, title: toTitle(entry.name), description: `Gerenciar ${toTitle(entry.name).toLowerCase()}.` });
+  }
+
+  shortcuts.unshift({ href: "/dashboard/encomendas/new", title: "Nova Encomenda", description: "Registrar encomenda rapidamente." });
+  return shortcuts;
+}
+
+export default async function DashboardPage() {
+  const shortcuts = await loadShortcuts();
+
   return (
     <main className="container dashboard-layout">
       <DashboardNav />
-
-      <section className="dashboard-content">
-        <div className="card">
-          <h2>Dashboard da Portaria</h2>
-          <p className="page-intro">Use os atalhos abaixo para gerenciar moradores e encomendas.</p>
-          <div className="kpi-grid">
-            {kpis.map((item) => (
-              <Link
-                href={item.href}
-                key={item.title}
-                className="kpi-card"
-                style={{ display: "block", textDecoration: "none", color: "inherit" }}
-                aria-label={item.cta}
-              >
-                <p className="kpi-label">
-                  <span>{item.icon}</span> {item.label}
-                </p>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <DashboardOverview shortcuts={shortcuts} />
     </main>
   );
 }
