@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const data = await supabaseRest<Encomenda[]>("encomendas", {
       query: {
-        select: "*,moradores(id,nome,apartamento,bloco,telefone)",
+        select: "*,moradores(id,nome,unidade,apto,torre,telefone)",
         order: "recebido_em.desc",
       },
     });

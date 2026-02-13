@@ -10,21 +10,25 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json().catch(() => null);
   const { id } = await params;
 
+  const apto = body?.apto ?? body?.apartamento;
+  const torre = body?.torre ?? body?.bloco;
+
   try {
     const [updated] = await supabaseRest<Morador[]>("moradores", {
       method: "PATCH",
       query: { id: `eq.${id}` },
       body: {
         nome: body?.nome,
-        apartamento: body?.apartamento,
-        bloco: body?.bloco,
+        unidade: body?.unidade ?? null,
+        apto,
+        torre,
         telefone: body?.telefone ?? null,
       },
     });
 
     return NextResponse.json(updated);
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Não foi possível atualizar este morador." }, { status: 500 });
   }
 }
 
@@ -42,7 +46,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     });
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Não foi possível remover este morador." }, { status: 500 });
   }
 }

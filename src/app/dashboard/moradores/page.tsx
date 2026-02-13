@@ -5,7 +5,7 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
 import type { Morador } from "@/lib/types";
 
-const initialForm = { nome: "", apartamento: "", bloco: "", telefone: "" };
+const initialForm = { nome: "", unidade: "", apto: "", torre: "", telefone: "" };
 
 type ToastState = {
   message: string;
@@ -19,12 +19,17 @@ export default function MoradoresPage() {
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
+    setLoading(true);
+    setError(null);
     const response = await fetch("/api/moradores", { cache: "no-store" });
-    const data = await response.json();
+    const data = await response.json().catch(() => []);
     if (response.ok) setMoradores(data);
-    else setToast({ message: data.error ?? "Falha ao carregar moradores", type: "error" });
+    else setError("Não foi possível carregar moradores no momento.");
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -48,8 +53,7 @@ export default function MoradoresPage() {
     });
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({ error: "Falha ao salvar" }));
-      setToast({ message: data.error, type: "error" });
+      setToast({ message: "Não foi possível salvar este morador.", type: "error" });
       return;
     }
 
@@ -66,8 +70,8 @@ export default function MoradoresPage() {
       actionLabel: "Confirmar",
       onAction: () => {
         void (async () => {
-          await fetch(`/api/moradores/${id}`, { method: "DELETE" });
-          setToast({ message: "Morador removido.", type: "success" });
+          const response = await fetch(`/api/moradores/${id}`, { method: "DELETE" });
+          setToast({ message: response.ok ? "Morador removido." : "Não foi possível remover este morador.", type: response.ok ? "success" : "error" });
           void load();
         })();
       },
@@ -86,23 +90,33 @@ export default function MoradoresPage() {
           onClose={() => setToast(null)}
         />
 
-        <div className="card" style={{ marginBottom: "1rem" }}>
-          <h2 style={{ marginTop: 0 }}>Moradores</h2>
-          <form onSubmit={submit} style={{ display: "grid", gap: "0.6rem" }}>
-            <input placeholder="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required />
-            <input
-              placeholder="Apartamento"
-              value={form.apartamento}
-              onChange={(e) => setForm({ ...form, apartamento: e.target.value })}
-              required
-            />
-            <input placeholder="Bloco" value={form.bloco} onChange={(e) => setForm({ ...form, bloco: e.target.value })} required />
-            <input
-              placeholder="Telefone (WhatsApp)"
-              value={form.telefone}
-              onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-            />
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="card">
+          <h2>Moradores</h2>
+          <p className="page-intro">Cadastre e atualize dados de contato dos moradores.</p>
+          <form onSubmit={submit} className="form-grid">
+            <div>
+              <label htmlFor="nome">Nome completo</label>
+              <input id="nome" placeholder="Ex: Ana Souza" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required />
+            </div>
+            <div>
+              <label htmlFor="unidade">Unidade (opcional)</label>
+              <input id="unidade" placeholder="Ex: Residencial Azul" value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <div>
+                <label htmlFor="apto">Apto</label>
+                <input id="apto" placeholder="Ex: 101" value={form.apto} onChange={(e) => setForm({ ...form, apto: e.target.value })} required />
+              </div>
+              <div>
+                <label htmlFor="torre">Torre</label>
+                <input id="torre" placeholder="Ex: A" value={form.torre} onChange={(e) => setForm({ ...form, torre: e.target.value })} required />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="telefone">Telefone (WhatsApp)</label>
+              <input id="telefone" placeholder="Ex: (11) 98888-7777" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
+            </div>
+            <div className="actions-row">
               <button className="button button-primary" type="submit">
                 {editingId ? "Atualizar" : "Cadastrar"}
               </button>
@@ -123,46 +137,56 @@ export default function MoradoresPage() {
         </div>
 
         <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Apt/Bloco</th>
-                <th>Telefone</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {moradores.map((morador) => (
-                <tr key={morador.id}>
-                  <td>{morador.nome}</td>
-                  <td>
-                    {morador.apartamento}/{morador.bloco}
-                  </td>
-                  <td>{morador.telefone ?? "-"}</td>
-                  <td style={{ display: "flex", gap: "0.5rem" }}>
-                    <button
-                      className="button button-secondary"
-                      onClick={() => {
-                        setEditingId(morador.id);
-                        setForm({
-                          nome: morador.nome,
-                          apartamento: morador.apartamento,
-                          bloco: morador.bloco,
-                          telefone: morador.telefone ?? "",
-                        });
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button className="button button-danger" onClick={() => remove(morador.id)}>
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h2>Lista de moradores</h2>
+          {error ? <div className="banner">{error}</div> : null}
+          {loading ? <div className="loading-state">Carregando moradores...</div> : null}
+          {!loading && !error && moradores.length === 0 ? <div className="empty-state">Nenhum morador cadastrado ainda.</div> : null}
+
+          {!loading && !error && moradores.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Unidade</th>
+                    <th>Apto/Torre</th>
+                    <th>Telefone</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moradores.map((morador) => (
+                    <tr key={morador.id}>
+                      <td>{morador.nome}</td>
+                      <td>{morador.unidade ?? "-"}</td>
+                      <td>{morador.apto}/{morador.torre}</td>
+                      <td>{morador.telefone ?? "-"}</td>
+                      <td className="actions-row">
+                        <button
+                          className="button button-secondary"
+                          onClick={() => {
+                            setEditingId(morador.id);
+                            setForm({
+                              nome: morador.nome,
+                              unidade: morador.unidade ?? "",
+                              apto: morador.apto,
+                              torre: morador.torre,
+                              telefone: morador.telefone ?? "",
+                            });
+                          }}
+                        >
+                          Editar
+                        </button>
+                        <button className="button button-danger" onClick={() => remove(morador.id)}>
+                          Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       </section>
     </main>

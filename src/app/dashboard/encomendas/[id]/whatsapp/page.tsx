@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
-import { Toast } from "@/components/toast";
 
 export default function WhatsappPage() {
   const params = useParams<{ id: string }>();
@@ -13,10 +12,10 @@ export default function WhatsappPage() {
   useEffect(() => {
     const load = async () => {
       const response = await fetch(`/api/encomendas/${params.id}/whatsapp`, { method: "POST" });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(data.error ?? "Erro ao gerar link");
+        setError("Não foi possível gerar o link de WhatsApp.");
         return;
       }
 
@@ -30,15 +29,16 @@ export default function WhatsappPage() {
     <main className="container dashboard-layout">
       <DashboardNav />
       <section className="dashboard-content">
-        <Toast message={error} type="error" onClose={() => setError(null)} />
         <div className="card">
-          <h2 style={{ marginTop: 0 }}>Notificação por WhatsApp</h2>
+          <h2>Notificação por WhatsApp</h2>
+          <p className="page-intro">Gere um link com mensagem pronta para avisar o morador.</p>
+          {error ? <div className="banner">{error}</div> : null}
           {link ? (
             <a className="button button-primary" href={link} target="_blank" rel="noreferrer">
               Abrir WhatsApp
             </a>
           ) : (
-            <p>Gerando link...</p>
+            <div className="loading-state">Gerando link...</div>
           )}
         </div>
       </section>

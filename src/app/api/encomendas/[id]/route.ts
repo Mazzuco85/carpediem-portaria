@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const [data] = await supabaseRest<Encomenda[]>("encomendas", {
       query: {
-        select: "*,moradores(id,nome,apartamento,bloco,telefone)",
+        select: "*,moradores(id,nome,unidade,apto,torre,telefone)",
         id: `eq.${id}`,
       },
     });

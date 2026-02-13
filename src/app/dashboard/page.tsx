@@ -14,8 +14,8 @@ export default function DashboardPage() {
 
       <section className="dashboard-content">
         <div className="card">
-          <h2 style={{ marginTop: 0 }}>Dashboard da Portaria</h2>
-          <p>Use os atalhos abaixo para gerenciar moradores e encomendas.</p>
+          <h2>Dashboard da Portaria</h2>
+          <p className="page-intro">Use os atalhos abaixo para gerenciar moradores e encomendas.</p>
           <div className="kpi-grid">
             {kpis.map((item) => (
               <article className="kpi-card" key={item.title}>
@@ -27,7 +27,7 @@ export default function DashboardPage() {
               </article>
             ))}
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1.25rem" }}>
+          <div className="actions-row" style={{ marginTop: "1.25rem" }}>
             <Link href="/dashboard/moradores" className="button button-primary">
               Gerenciar Moradores
             </Link>

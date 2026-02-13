@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -7,6 +8,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -14,20 +16,20 @@ export default function LoginPage() {
     setError(null);
 
     const formData = new FormData(event.currentTarget);
-    const username = String(formData.get("username") || "");
-    const password = String(formData.get("password") || "");
 
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({
+        username: formData.get("username"),
+        password: formData.get("password"),
+      }),
     });
 
     setLoading(false);
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({ error: "Falha no login" }));
-      setError(data.error);
+      setError("Usuário ou senha inválidos.");
       return;
     }
 
@@ -36,20 +38,32 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="container" style={{ maxWidth: 420, marginTop: "12vh" }}>
-      <div className="card">
-        <h1 style={{ marginTop: 0 }}>Portaria CarpeDiem</h1>
-        <p>Faça login para continuar.</p>
-        <form onSubmit={onSubmit} style={{ display: "grid", gap: "0.8rem" }}>
+    <main className="login-shell">
+      <div className="card login-card">
+        <div className="login-logo">
+          <Image src="/logo.png" alt="Logo CarpeDiem" width={42} height={42} className="brand-logo" priority />
+          <div>
+            <h1 style={{ margin: 0 }}>Portaria CarpeDiem</h1>
+            <p className="page-intro" style={{ marginBottom: 0 }}>
+              Acesse o painel premium da portaria
+            </p>
+          </div>
+        </div>
+        <form onSubmit={onSubmit} className="form-grid">
           <div>
             <label htmlFor="username">Usuário</label>
-            <input id="username" name="username" required />
+            <input id="username" name="username" placeholder="Digite seu usuário" required />
           </div>
           <div>
             <label htmlFor="password">Senha</label>
-            <input id="password" type="password" name="password" required />
+            <div className="password-row">
+              <input id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Digite sua senha" required />
+              <button className="button button-secondary" type="button" onClick={() => setShowPassword((state) => !state)}>
+                {showPassword ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
           </div>
-          {error ? <p style={{ color: "#dc2626", margin: 0 }}>{error}</p> : null}
+          {error ? <div className="banner">{error}</div> : null}
           <button disabled={loading} className="button button-primary" type="submit">
             {loading ? "Entrando..." : "Entrar"}
           </button>
