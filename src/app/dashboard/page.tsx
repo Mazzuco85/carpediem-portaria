@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { DashboardNav } from "@/components/dashboard-nav";
 
+const MORADORES_ROUTE = "/dashboard/moradores";
+const ENCOMENDAS_ROUTE = "/dashboard/encomendas";
+const NOVA_ENCOMENDA_ROUTE = "/dashboard/encomendas/new";
+
 const kpis = [
   {
     icon: "👥",
