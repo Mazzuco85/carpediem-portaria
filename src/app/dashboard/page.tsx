@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { DashboardNav } from "@/components/dashboard-nav";
 
+const MORADORES_ROUTE = "/dashboard/moradores";
+const ENCOMENDAS_ROUTE = "/dashboard/encomendas";
+const NOVA_ENCOMENDA_ROUTE = "/dashboard/encomendas/new";
+
 const kpis = [
   { icon: "👥", label: "Cadastro", title: "Moradores", description: "Atualize moradores e informações de contato." },
   { icon: "📦", label: "Operação", title: "Encomendas", description: "Acompanhe recebimentos e entregas pendentes." },
@@ -28,13 +32,13 @@ export default function DashboardPage() {
             ))}
           </div>
           <div className="actions-row" style={{ marginTop: "1.25rem" }}>
-            <Link href="/dashboard/moradores" className="button button-primary">
+            <Link href={MORADORES_ROUTE} className="button button-primary">
               Gerenciar Moradores
             </Link>
-            <Link href="/dashboard/encomendas" className="button button-secondary">
+            <Link href={ENCOMENDAS_ROUTE} className="button button-secondary">
               Ver Encomendas
             </Link>
-            <Link href="/dashboard/encomendas/new" className="button button-secondary">
+            <Link href={NOVA_ENCOMENDA_ROUTE} className="button button-secondary">
               Cadastrar Encomenda
             </Link>
           </div>
