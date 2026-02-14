@@ -26,7 +26,7 @@ export default function NewEncomendaPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    const response = await fetch("/api/encomendas", {
+    const response = await fetch("/api/encomendas-v2", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

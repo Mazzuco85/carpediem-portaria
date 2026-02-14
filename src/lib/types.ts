@@ -13,12 +13,15 @@ export type EncomendaStatus = "pendente" | "entregue";
 export type Encomenda = {
   id: string;
   morador_id: string;
+  unidade?: string | null;
   descricao: string;
   codigo_rastreio: string | null;
+  codigo_retirada?: string | null;
   observacoes: string | null;
   status: EncomendaStatus;
   recebido_em: string;
   entregue_em: string | null;
   created_at: string;
   moradores?: Pick<Morador, "id" | "nome" | "unidade" | "apto" | "torre" | "telefone">;
+  moradores_v2?: Pick<Morador, "id" | "nome" | "unidade" | "apto" | "torre" | "telefone">;
 };
