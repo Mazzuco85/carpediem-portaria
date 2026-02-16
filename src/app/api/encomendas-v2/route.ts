@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   try {
     const data = await supabaseRest<Encomenda[]>("encomendas_v2", {
       query: {
-        select: "*,moradores_v2(id,nome,unidade,apto,torre,telefone)",
+        select: "*,moradores_v2(id,nome,apartamento,telefone,email,torre_id)",
         order: "recebido_em.desc",
       },
     });
@@ -50,29 +50,23 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
 
-  if (!body?.descricao || (!body?.morador_id && !body?.unidade)) {
-    return NextResponse.json({ error: "descricao e morador_id (ou unidade) são obrigatórios." }, { status: 400 });
+  if (!body?.descricao || !body?.morador_id || !body?.tipo) {
+    return NextResponse.json({ error: "descricao, morador_id e tipo são obrigatórios." }, { status: 400 });
   }
 
   try {
     const codigoRetirada = await generateUniqueWithdrawalCode();
 
     const payload: Record<string, unknown> = {
+      morador_id: body.morador_id,
       descricao: body.descricao,
-      codigo_rastreio: body.codigo_rastreio ?? null,
+      codigo_barras: body.codigo_barras ?? null,
+      tipo: body.tipo,
       observacoes: body.observacoes ?? null,
       status: "pendente",
       recebido_em: new Date().toISOString(),
       codigo_retirada: codigoRetirada,
     };
-
-    if (body.morador_id) {
-      payload.morador_id = body.morador_id;
-    }
-
-    if (body.unidade) {
-      payload.unidade = body.unidade;
-    }
 
     const [created] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       method: "POST",
