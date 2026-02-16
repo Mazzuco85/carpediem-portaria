@@ -8,9 +8,9 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
-    const data = await supabaseRest<Encomenda[]>("encomendas", {
+    const data = await supabaseRest<Encomenda[]>("encomendas_v2", {
       query: {
-        select: "*,moradores(id,nome,unidade,apto,torre,telefone)",
+        select: "*,moradores_v2(id,nome,apartamento,telefone,email,torre_id)",
         order: "recebido_em.desc",
       },
     });
@@ -27,17 +27,18 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
 
-  if (!body?.morador_id || !body?.descricao) {
-    return NextResponse.json({ error: "morador_id e descricao são obrigatórios." }, { status: 400 });
+  if (!body?.morador_id || !body?.tipo) {
+    return NextResponse.json({ error: "morador_id e tipo são obrigatórios." }, { status: 400 });
   }
 
   try {
-    const [created] = await supabaseRest<Encomenda[]>("encomendas", {
+    const [created] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       method: "POST",
       body: {
         morador_id: body.morador_id,
-        descricao: body.descricao,
-        codigo_rastreio: body.codigo_rastreio ?? null,
+        descricao: body.descricao ?? `Encomenda (${body.tipo})`,
+        codigo_barras: body.codigo_barras ?? null,
+        tipo: body.tipo,
         observacoes: body.observacoes ?? null,
         status: "pendente",
         recebido_em: new Date().toISOString(),

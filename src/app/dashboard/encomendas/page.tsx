@@ -72,7 +72,7 @@ export default function EncomendasPage() {
             {filtered.map((item) => (
               <article key={item.id} className="entity-card">
                 <div className="section-header">
-                  <h3>{item.moradores?.nome ?? "Morador"}</h3>
+                  <h3>{item.moradores_v2?.nome ?? "Morador"}</h3>
                   <span className={`status-badge ${item.status}`}>{item.status.toUpperCase()}</span>
                 </div>
                 <p>{item.descricao}</p>

@@ -7,8 +7,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
 
-  const body = await request.json().catch(() => null);
   const { id } = await params;
+  const body = await request.json().catch(() => null);
   const nome = body?.nome ? String(body.nome).trim() : "";
   const apartamento = body?.apartamento ? String(body.apartamento).trim() : "";
   const telefone = body?.telefone ? String(body.telefone).trim() : null;
