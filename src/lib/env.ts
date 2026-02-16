@@ -13,3 +13,8 @@ export function getEnv(key: Key): string {
 export function hasSupabaseConfig(): boolean {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
+
+
+export function hasAdminConfig(): boolean {
+  return Boolean(process.env.ADMIN_USER && process.env.ADMIN_PASS);
+}

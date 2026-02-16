@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
 
-  if (!body?.descricao || !body?.morador_id || !body?.tipo) {
-    return NextResponse.json({ error: "descricao, morador_id e tipo são obrigatórios." }, { status: 400 });
+  if (!body?.morador_id || !body?.tipo) {
+    return NextResponse.json({ error: "morador_id e tipo são obrigatórios." }, { status: 400 });
   }
 
   try {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const payload: Record<string, unknown> = {
       morador_id: body.morador_id,
-      descricao: body.descricao,
+      descricao: body.descricao ?? null,
       codigo_barras: body.codigo_barras ?? null,
       tipo: body.tipo,
       observacoes: body.observacoes ?? null,

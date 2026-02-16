@@ -15,7 +15,11 @@ export type MoradorV2 = {
   telefone: string | null;
   email: string | null;
   torre_id: string | null;
+  unidade?: string;
   created_at?: string;
+  torres?: {
+    codigo: string;
+  } | null;
 };
 
 export type EncomendaStatus = "pendente" | "entregue";
@@ -26,6 +30,8 @@ export type Encomenda = {
   unidade?: string | null;
   descricao: string;
   codigo_rastreio: string | null;
+  codigo_barras?: string | null;
+  tipo?: string | null;
   codigo_retirada?: string | null;
   observacoes: string | null;
   status: EncomendaStatus;

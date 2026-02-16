@@ -13,17 +13,27 @@ export async function GET(request: NextRequest) {
   try {
     const data = await supabaseRest<MoradorV2[]>("moradores_v2", {
       query: {
-        select: "id,nome,apartamento,telefone,email,torre_id",
+        select: "id,nome,apartamento,telefone,email,torre_id,torres(codigo)",
         order: "nome.asc",
         ...(escapedQueryValue
           ? {
-              or: `(nome.ilike.*${escapedQueryValue}*,apartamento.ilike.*${escapedQueryValue}*)`,
+              or: `(nome.ilike.*${escapedQueryValue}*,apartamento.ilike.*${escapedQueryValue}*,telefone.ilike.*${escapedQueryValue}*)`,
             }
           : {}),
       },
     });
 
-    return NextResponse.json(data);
+    const normalized = data.map((morador) => ({
+      id: morador.id,
+      nome: morador.nome,
+      apartamento: morador.apartamento,
+      telefone: morador.telefone,
+      email: morador.email,
+      torre_id: morador.torre_id,
+      unidade: morador.torres?.codigo ? `${morador.apartamento}/${morador.torres.codigo}` : morador.apartamento,
+    }));
+
+    return NextResponse.json(normalized);
   } catch {
     return NextResponse.json({ error: "Não foi possível carregar moradores agora. Tente novamente." }, { status: 500 });
   }
