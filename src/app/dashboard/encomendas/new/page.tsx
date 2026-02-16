@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
@@ -11,9 +11,10 @@ const TIPOS_ENCOMENDA = ["Caixa", "Bag", "Padrão", "Envelope", "Outro"] as cons
 export default function NewEncomendaPage() {
   const router = useRouter();
   const [moradores, setMoradores] = useState<MoradorV2[]>([]);
+  const [selectedMoradorId, setSelectedMoradorId] = useState("");
   const [moradorSearch, setMoradorSearch] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [loadingMoradores, setLoadingMoradores] = useState(true);
+  const [loadingMoradores, setLoadingMoradores] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [codigo, setCodigo] = useState("");
 
@@ -32,6 +33,7 @@ export default function NewEncomendaPage() {
 
         const data = (await response.json()) as MoradorV2[];
         setMoradores(data);
+
       } catch {
         if (!controller.signal.aborted) {
           setToast({ message: "Não foi possível carregar moradores para seleção.", type: "error" });
@@ -45,7 +47,7 @@ export default function NewEncomendaPage() {
 
     const timeout = setTimeout(() => {
       void loadMoradores();
-    }, 200);
+    }, 300);
 
     return () => {
       controller.abort();
@@ -53,27 +55,28 @@ export default function NewEncomendaPage() {
     };
   }, [moradorSearch]);
 
-  const moradoresById = useMemo(() => new Map(moradores.map((morador) => [morador.id, morador])), [moradores]);
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
     const moradorId = String(formData.get("morador_id") ?? "");
-    const descricao = String(formData.get("descricao") ?? "");
     const tipo = String(formData.get("tipo") ?? "");
     const codigoBarras = String(formData.get("codigo_barras") ?? "").trim();
-    const observacoes = String(formData.get("observacoes") ?? "").trim();
+
+    if (!moradorId || !tipo) {
+      setToast({ message: "Selecione morador e tipo para continuar.", type: "error" });
+      return;
+    }
 
     const response = await fetch("/api/encomendas-v2", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         morador_id: moradorId,
-        descricao,
+        descricao: `Encomenda ${tipo}`,
         codigo_barras: codigoBarras || null,
         tipo,
-        observacoes: observacoes || null,
+        observacoes: null,
       }),
     });
 
@@ -82,28 +85,30 @@ export default function NewEncomendaPage() {
     }
 
     const created = (await response.json()) as { codigo_retirada?: string };
-    const moradorSelecionado = moradoresById.get(moradorId);
+    const moradorSelecionado = moradores.find((morador) => morador.id === moradorId);
     const telefone = moradorSelecionado?.telefone?.replace(/\D/g, "");
 
-    if (moradorSelecionado && telefone) {
-      const messageLines = [
-        `Olá, ${moradorSelecionado.nome}.`,
-        `Sua encomenda chegou na portaria.`,
-        `Apartamento: ${moradorSelecionado.apartamento}`,
-        `Tipo de encomenda: ${tipo}`,
-      ];
-
-      if (codigoBarras) {
-        messageLines.push(`Código de barras: ${codigoBarras}`);
-      }
-
-      if (created.codigo_retirada) {
-        messageLines.push(`Código de retirada: ${created.codigo_retirada}`);
-      }
-
-      const message = encodeURIComponent(messageLines.join("\n"));
-      window.open(`https://wa.me/${telefone}?text=${message}`, "_blank", "noopener,noreferrer");
+    if (!moradorSelecionado || !telefone) {
+      setToast({ message: "Encomenda cadastrada, mas o morador não possui telefone para WhatsApp.", type: "error" });
+      return;
     }
+
+    const messageLines = [
+      "Olá! Sua encomenda chegou na portaria.",
+      `Morador: ${moradorSelecionado.nome} (${moradorSelecionado.unidade ?? moradorSelecionado.apartamento})`,
+      `Tipo: ${tipo}`,
+    ];
+
+    if (codigoBarras) {
+      messageLines.push(`Código de barras: ${codigoBarras}`);
+    }
+
+    if (created.codigo_retirada) {
+      messageLines.push(`Código de retirada: ${created.codigo_retirada}`);
+    }
+
+    const message = encodeURIComponent(messageLines.join("\n"));
+    window.open(`https://wa.me/${telefone}?text=${message}`, "_blank", "noopener,noreferrer");
 
     setToast({ message: "Encomenda cadastrada com sucesso.", type: "success" });
     setTimeout(() => {
@@ -137,13 +142,21 @@ export default function NewEncomendaPage() {
                 name="morador_search"
                 value={moradorSearch}
                 onChange={(event) => setMoradorSearch(event.target.value)}
-                placeholder="Buscar por nome ou apartamento"
+                placeholder="Buscar por nome, apartamento ou telefone"
               />
-              <select name="morador_id" id="morador_id" required disabled={loadingMoradores || moradores.length === 0} style={{ marginTop: "0.75rem" }}>
+              <select
+                name="morador_id"
+                id="morador_id"
+                required
+                value={selectedMoradorId}
+                onChange={(event) => setSelectedMoradorId(event.target.value)}
+                disabled={loadingMoradores || moradores.length === 0}
+                style={{ marginTop: "0.75rem" }}
+              >
                 <option value="">Selecione...</option>
                 {moradores.map((morador) => (
                   <option key={morador.id} value={morador.id}>
-                    {morador.nome} - Apt {morador.apartamento}
+                    {(morador.unidade ?? morador.apartamento) + " - " + morador.nome}
                   </option>
                 ))}
               </select>
@@ -164,14 +177,6 @@ export default function NewEncomendaPage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label htmlFor="descricao">Descrição</label>
-              <input id="descricao" name="descricao" required />
-            </div>
-            <div>
-              <label htmlFor="observacoes">Observações</label>
-              <textarea id="observacoes" name="observacoes" rows={4} />
             </div>
             <button className="button button-primary" type="submit" disabled={loadingMoradores || moradores.length === 0}>
               Salvar
