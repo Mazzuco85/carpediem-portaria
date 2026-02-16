@@ -8,6 +8,16 @@ export type Morador = {
   created_at: string;
 };
 
+export type MoradorV2 = {
+  id: string;
+  nome: string;
+  apartamento: string;
+  telefone: string | null;
+  email: string | null;
+  torre_id: string | null;
+  created_at?: string;
+};
+
 export type EncomendaStatus = "pendente" | "entregue";
 
 export type Encomenda = {
@@ -23,5 +33,5 @@ export type Encomenda = {
   entregue_em: string | null;
   created_at: string;
   moradores?: Pick<Morador, "id" | "nome" | "unidade" | "apto" | "torre" | "telefone">;
-  moradores_v2?: Pick<Morador, "id" | "nome" | "unidade" | "apto" | "torre" | "telefone">;
+  moradores_v2?: Pick<MoradorV2, "id" | "nome" | "apartamento" | "telefone" | "email" | "torre_id">;
 };
