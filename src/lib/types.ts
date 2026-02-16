@@ -15,6 +15,7 @@ export type MoradorV2 = {
   telefone: string | null;
   email: string | null;
   torre_id: string | null;
+  display?: string;
   unidade?: string;
   created_at?: string;
   torres?: {

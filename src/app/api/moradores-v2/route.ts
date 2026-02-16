@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const data = await supabaseRest<MoradorV2[]>("moradores_v2", {
       query: {
-        select: "id,nome,apartamento,telefone,email,torre_id,torres(codigo)",
+        select: "id,nome,apartamento,torre_id,telefone,email",
         order: "nome.asc",
         ...(escapedQueryValue
           ? {
@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
       id: morador.id,
       nome: morador.nome,
       apartamento: morador.apartamento,
+      torre_id: morador.torre_id,
       telefone: morador.telefone,
       email: morador.email,
-      torre_id: morador.torre_id,
-      unidade: morador.torres?.codigo ? `${morador.apartamento}/${morador.torres.codigo}` : morador.apartamento,
+      display: `${morador.apartamento} - ${morador.nome}`,
     }));
 
     return NextResponse.json(normalized);

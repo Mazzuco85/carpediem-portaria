@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const payload: Record<string, unknown> = {
       morador_id: body.morador_id,
-      descricao: body.descricao ?? null,
+      descricao: body.descricao ?? `Encomenda (${body.tipo})`,
       codigo_barras: body.codigo_barras ?? null,
       tipo: body.tipo,
       observacoes: body.observacoes ?? null,

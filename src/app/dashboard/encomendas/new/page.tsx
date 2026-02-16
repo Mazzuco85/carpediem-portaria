@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
@@ -8,8 +8,25 @@ import type { MoradorV2 } from "@/lib/types";
 
 const TIPOS_ENCOMENDA = ["Caixa", "Bag", "Padrão", "Envelope", "Outro"] as const;
 
+function normalizePhone(rawPhone: string) {
+  const onlyDigits = rawPhone.replace(/\D/g, "");
+
+  if (!onlyDigits) {
+    return "";
+  }
+
+  if (onlyDigits.startsWith("55")) {
+    return onlyDigits;
+  }
+
+  return `55${onlyDigits}`;
+}
+
 export default function NewEncomendaPage() {
   const router = useRouter();
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const tipoSelectRef = useRef<HTMLSelectElement>(null);
+
   const [moradores, setMoradores] = useState<MoradorV2[]>([]);
   const [selectedMoradorId, setSelectedMoradorId] = useState("");
   const [moradorSearch, setMoradorSearch] = useState("");
@@ -24,16 +41,12 @@ export default function NewEncomendaPage() {
     const loadMoradores = async () => {
       setLoadingMoradores(true);
 
-      const query = moradorSearch.trim();
-      const url = query ? `/api/moradores-v2?q=${encodeURIComponent(query)}` : "/api/moradores-v2";
-
       try {
-        const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+        const response = await fetch("/api/moradores-v2", { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error("Falha ao carregar moradores");
 
         const data = (await response.json()) as MoradorV2[];
         setMoradores(data);
-
       } catch {
         if (!controller.signal.aborted) {
           setToast({ message: "Não foi possível carregar moradores para seleção.", type: "error" });
@@ -45,15 +58,32 @@ export default function NewEncomendaPage() {
       }
     };
 
-    const timeout = setTimeout(() => {
-      void loadMoradores();
-    }, 300);
+    void loadMoradores();
 
     return () => {
       controller.abort();
-      clearTimeout(timeout);
     };
-  }, [moradorSearch]);
+  }, []);
+
+  const filteredMoradores = useMemo(() => {
+    const searchTerms = moradorSearch
+      .toLocaleLowerCase("pt-BR")
+      .split(/\s+/)
+      .map((term) => term.trim())
+      .filter(Boolean);
+
+    if (searchTerms.length === 0) {
+      return moradores;
+    }
+
+    return moradores.filter((morador) => {
+      const searchable = [morador.nome, morador.apartamento, morador.telefone ?? ""]
+        .join(" ")
+        .toLocaleLowerCase("pt-BR");
+
+      return searchTerms.every((term) => searchable.includes(term));
+    });
+  }, [moradorSearch, moradores]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -73,10 +103,9 @@ export default function NewEncomendaPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         morador_id: moradorId,
-        descricao: `Encomenda ${tipo}`,
+        descricao: `Encomenda (${tipo})`,
         codigo_barras: codigoBarras || null,
         tipo,
-        observacoes: null,
       }),
     });
 
@@ -86,28 +115,17 @@ export default function NewEncomendaPage() {
 
     const created = (await response.json()) as { codigo_retirada?: string };
     const moradorSelecionado = moradores.find((morador) => morador.id === moradorId);
-    const telefone = moradorSelecionado?.telefone?.replace(/\D/g, "");
+    const telefone = normalizePhone(moradorSelecionado?.telefone ?? "");
 
-    if (!moradorSelecionado || !telefone) {
-      setToast({ message: "Encomenda cadastrada, mas o morador não possui telefone para WhatsApp.", type: "error" });
+    if (!moradorSelecionado || !telefone || !created.codigo_retirada) {
+      setToast({ message: "Encomenda cadastrada, mas não foi possível abrir o WhatsApp.", type: "error" });
       return;
     }
 
-    const messageLines = [
-      "Olá! Sua encomenda chegou na portaria.",
-      `Morador: ${moradorSelecionado.nome} (${moradorSelecionado.unidade ?? moradorSelecionado.apartamento})`,
-      `Tipo: ${tipo}`,
-    ];
+    const message = encodeURIComponent(
+      `Olá ${moradorSelecionado.nome}, chegou uma encomenda para o apto ${moradorSelecionado.apartamento}. Código de retirada: ${created.codigo_retirada}. Favor retirar na portaria.`,
+    );
 
-    if (codigoBarras) {
-      messageLines.push(`Código de barras: ${codigoBarras}`);
-    }
-
-    if (created.codigo_retirada) {
-      messageLines.push(`Código de retirada: ${created.codigo_retirada}`);
-    }
-
-    const message = encodeURIComponent(messageLines.join("\n"));
     window.open(`https://wa.me/${telefone}?text=${message}`, "_blank", "noopener,noreferrer");
 
     setToast({ message: "Encomenda cadastrada com sucesso.", type: "success" });
@@ -132,7 +150,9 @@ export default function NewEncomendaPage() {
           </div>
 
           {loadingMoradores ? <div className="loading-state">Carregando moradores...</div> : null}
-          {!loadingMoradores && moradores.length === 0 ? <div className="empty-state">Nenhum morador encontrado para o filtro informado.</div> : null}
+          {!loadingMoradores && filteredMoradores.length === 0 ? (
+            <div className="empty-state">Nenhum morador encontrado para o filtro informado.</div>
+          ) : null}
 
           <form onSubmit={submit} className="form-grid">
             <div>
@@ -149,25 +169,40 @@ export default function NewEncomendaPage() {
                 id="morador_id"
                 required
                 value={selectedMoradorId}
-                onChange={(event) => setSelectedMoradorId(event.target.value)}
-                disabled={loadingMoradores || moradores.length === 0}
+                onChange={(event) => {
+                  setSelectedMoradorId(event.target.value);
+                  barcodeInputRef.current?.focus();
+                }}
+                disabled={loadingMoradores || filteredMoradores.length === 0}
                 style={{ marginTop: "0.75rem" }}
               >
                 <option value="">Selecione...</option>
-                {moradores.map((morador) => (
+                {filteredMoradores.map((morador) => (
                   <option key={morador.id} value={morador.id}>
-                    {(morador.unidade ?? morador.apartamento) + " - " + morador.nome}
+                    {morador.display ?? `${morador.apartamento} - ${morador.nome}`}
                   </option>
                 ))}
               </select>
             </div>
             <div>
               <label htmlFor="codigo_barras">Código de barras</label>
-              <input id="codigo_barras" name="codigo_barras" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+              <input
+                id="codigo_barras"
+                name="codigo_barras"
+                ref={barcodeInputRef}
+                value={codigo}
+                onChange={(event) => setCodigo(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    tipoSelectRef.current?.focus();
+                  }
+                }}
+              />
             </div>
             <div>
               <label htmlFor="tipo">Tipo de encomenda</label>
-              <select id="tipo" name="tipo" required defaultValue="">
+              <select id="tipo" name="tipo" required defaultValue="" ref={tipoSelectRef}>
                 <option value="" disabled>
                   Selecione...
                 </option>
@@ -178,8 +213,8 @@ export default function NewEncomendaPage() {
                 ))}
               </select>
             </div>
-            <button className="button button-primary" type="submit" disabled={loadingMoradores || moradores.length === 0}>
-              Salvar
+            <button className="button button-primary" type="submit" disabled={loadingMoradores || filteredMoradores.length === 0}>
+              Salvar e notificar via WhatsApp
             </button>
           </form>
         </div>
