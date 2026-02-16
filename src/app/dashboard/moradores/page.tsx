@@ -3,12 +3,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
-import type { Morador } from "@/lib/types";
+import type { MoradorV2 } from "@/lib/types";
 
-const initialForm = { nome: "", unidade: "", torre: "", apto: "", telefone: "" };
+const initialForm = { nome: "", apartamento: "", telefone: "", email: "" };
 
 export default function MoradoresPage() {
-  const [moradores, setMoradores] = useState<Morador[]>([]);
+  const [moradores, setMoradores] = useState<MoradorV2[]>([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -21,7 +21,7 @@ export default function MoradoresPage() {
   const load = async () => {
     setLoading(true);
     setError(null);
-    const response = await fetch("/api/moradores", { cache: "no-store" });
+    const response = await fetch("/api/moradores-v2", { cache: "no-store" });
     const data = await response.json().catch(() => []);
     if (response.ok) setMoradores(data);
     else setError("Não foi possível carregar moradores no momento.");
@@ -37,7 +37,7 @@ export default function MoradoresPage() {
   }, []);
 
   const filtered = useMemo(
-    () => moradores.filter((m) => [m.nome, m.unidade, m.torre, m.apto, m.telefone].join(" ").toLowerCase().includes(query.toLowerCase())),
+    () => moradores.filter((m) => [m.nome, m.apartamento, m.telefone, m.email].join(" ").toLowerCase().includes(query.toLowerCase())),
     [moradores, query],
   );
 
@@ -47,15 +47,20 @@ export default function MoradoresPage() {
     setOpenModal(true);
   };
 
-  const startEdit = (morador: Morador) => {
+  const startEdit = (morador: MoradorV2) => {
     setEditingId(morador.id);
-    setForm({ nome: morador.nome, unidade: morador.unidade ?? "", torre: morador.torre, apto: morador.apto, telefone: morador.telefone ?? "" });
+    setForm({
+      nome: morador.nome,
+      apartamento: morador.apartamento,
+      telefone: morador.telefone ?? "",
+      email: morador.email ?? "",
+    });
     setOpenModal(true);
   };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const response = await fetch(editingId ? `/api/moradores/${editingId}` : "/api/moradores", {
+    const response = await fetch(editingId ? `/api/moradores-v2/${editingId}` : "/api/moradores-v2", {
       method: editingId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -69,7 +74,7 @@ export default function MoradoresPage() {
 
   const remove = async () => {
     if (!deletingId) return;
-    const response = await fetch(`/api/moradores/${deletingId}`, { method: "DELETE" });
+    const response = await fetch(`/api/moradores-v2/${deletingId}`, { method: "DELETE" });
     setDeletingId(null);
     setToast({ message: response.ok ? "Morador removido." : "Não foi possível remover este morador.", type: response.ok ? "success" : "error" });
     void load();
@@ -90,7 +95,7 @@ export default function MoradoresPage() {
             <button className="button button-primary" onClick={startCreate}>Novo morador</button>
           </div>
           <div className="search-row">
-            <input placeholder="Buscar por nome, apto, torre ou telefone" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <input placeholder="Buscar por nome, apartamento, telefone ou e-mail" value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
 
           {error ? <div className="banner">{error}</div> : null}
@@ -100,8 +105,9 @@ export default function MoradoresPage() {
             {filtered.map((morador) => (
               <article key={morador.id} className="entity-card">
                 <h3>{morador.nome}</h3>
-                <p>{morador.unidade ? `${morador.unidade} · ` : ""}Apto {morador.apto}/{morador.torre}</p>
+                <p>Apto {morador.apartamento}</p>
                 <p>{morador.telefone || "Sem telefone"}</p>
+                <p>{morador.email || "Sem e-mail"}</p>
                 <div className="actions-row">
                   <button className="button button-secondary" onClick={() => startEdit(morador)}>Editar</button>
                   <button className="button button-danger" onClick={() => setDeletingId(morador.id)}>Excluir</button>
@@ -118,12 +124,9 @@ export default function MoradoresPage() {
             <h2>{editingId ? "Editar morador" : "Cadastrar morador"}</h2>
             <form onSubmit={submit} className="form-grid">
               <div><label>Nome completo</label><input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required /></div>
-              <div><label>Unidade</label><input value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} /></div>
-              <div className="form-row">
-                <div><label>Torre</label><input value={form.torre} onChange={(e) => setForm({ ...form, torre: e.target.value })} required /></div>
-                <div><label>Apto</label><input value={form.apto} onChange={(e) => setForm({ ...form, apto: e.target.value })} required /></div>
-              </div>
+              <div><label>Apartamento</label><input value={form.apartamento} onChange={(e) => setForm({ ...form, apartamento: e.target.value })} required /></div>
               <div><label>Telefone</label><input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} /></div>
+              <div><label>E-mail</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
               <div className="actions-row">
                 <button className="button button-primary" type="submit">Salvar</button>
                 <button className="button button-secondary" type="button" onClick={() => setOpenModal(false)}>Cancelar</button>

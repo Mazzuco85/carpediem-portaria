@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureApiAuth } from "@/lib/api-auth";
 import { supabaseRest } from "@/lib/supabase";
-import type { Morador } from "@/lib/types";
+import type { MoradorV2 } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
 
   try {
-    const data = await supabaseRest<Morador[]>("moradores", {
-      query: { select: "*", order: "created_at.desc" },
+    const data = await supabaseRest<MoradorV2[]>("moradores_v2", {
+      query: { select: "id,nome,apartamento,telefone,email,torre_id,created_at", order: "created_at.desc" },
     });
     return NextResponse.json(data);
   } catch {
@@ -22,25 +22,25 @@ export async function POST(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const body = await request.json().catch(() => null);
-  const nome = body?.nome ? String(body.nome) : "";
-  const unidade = body?.unidade ? String(body.unidade) : null;
-  const apto = body?.apto ? String(body.apto) : "";
-  const torre = body?.torre ? String(body.torre) : "";
-  const telefone = body?.telefone ? String(body.telefone) : null;
+  const nome = body?.nome ? String(body.nome).trim() : "";
+  const apartamento = body?.apartamento ? String(body.apartamento).trim() : "";
+  const telefone = body?.telefone ? String(body.telefone).trim() : null;
+  const email = body?.email ? String(body.email).trim() : null;
+  const torreId = body?.torre_id ? String(body.torre_id).trim() : null;
 
-  if (!nome || !apto || !torre) {
-    return NextResponse.json({ error: "nome, apto e torre são obrigatórios." }, { status: 400 });
+  if (!nome || !apartamento) {
+    return NextResponse.json({ error: "nome e apartamento são obrigatórios." }, { status: 400 });
   }
 
   try {
-    const [created] = await supabaseRest<Morador[]>("moradores", {
+    const [created] = await supabaseRest<MoradorV2[]>("moradores_v2", {
       method: "POST",
       body: {
         nome,
-        unidade,
-        apto,
-        torre,
+        apartamento,
         telefone,
+        email,
+        torre_id: torreId,
       },
     });
 

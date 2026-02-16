@@ -3,6 +3,20 @@ import { ensureApiAuth } from "@/lib/api-auth";
 import { supabaseRest } from "@/lib/supabase";
 import type { Encomenda } from "@/lib/types";
 
+function normalizePhone(rawPhone: string) {
+  const onlyDigits = rawPhone.replace(/\D/g, "");
+
+  if (!onlyDigits) {
+    return "";
+  }
+
+  if (onlyDigits.startsWith("55")) {
+    return onlyDigits;
+  }
+
+  return `55${onlyDigits}`;
+}
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
@@ -10,20 +24,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
 
   try {
-    const [encomenda] = await supabaseRest<Encomenda[]>("encomendas", {
+    const [encomenda] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       query: {
-        select: "*,moradores(id,nome,unidade,apto,torre,telefone)",
+        select: "*,moradores_v2(id,nome,apartamento,telefone,email,torre_id)",
         id: `eq.${id}`,
       },
     });
 
-    if (!encomenda || !encomenda.moradores?.telefone) {
+    const morador = encomenda?.moradores_v2;
+
+    if (!morador?.telefone) {
       return NextResponse.json({ error: "Telefone do morador não encontrado." }, { status: 400 });
     }
 
-    const phone = encomenda.moradores.telefone.replace(/\D/g, "");
-    const unidadeLabel = encomenda.moradores.unidade ? `${encomenda.moradores.unidade} · ` : "";
-    const message = `Olá ${encomenda.moradores.nome}, sua encomenda (${encomenda.descricao}) chegou na portaria. Apartamento ${unidadeLabel}${encomenda.moradores.apto}/${encomenda.moradores.torre}.`;
+    const phone = normalizePhone(morador.telefone);
+    const descricao = encomenda.descricao ?? encomenda.tipo ?? "encomenda";
+    const message = `Olá ${morador.nome}, sua encomenda (${descricao}) chegou na portaria. Apartamento ${morador.apartamento}.`;
 
     return NextResponse.json({
       link: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,

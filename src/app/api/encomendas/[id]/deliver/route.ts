@@ -10,7 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
 
   try {
-    const [updated] = await supabaseRest<Encomenda[]>("encomendas", {
+    const [updated] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       method: "PATCH",
       query: { id: `eq.${id}` },
       body: {

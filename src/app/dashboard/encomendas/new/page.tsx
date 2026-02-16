@@ -162,7 +162,7 @@ export default function NewEncomendaPage() {
                 name="morador_search"
                 value={moradorSearch}
                 onChange={(event) => setMoradorSearch(event.target.value)}
-                placeholder="Buscar por nome, apartamento ou telefone"
+                placeholder="Buscar por nome ou apartamento"
               />
               <select
                 name="morador_id"
@@ -214,7 +214,7 @@ export default function NewEncomendaPage() {
               </select>
             </div>
             <button className="button button-primary" type="submit" disabled={loadingMoradores || filteredMoradores.length === 0}>
-              Salvar e notificar via WhatsApp
+              Salvar e Notificar WhatsApp
             </button>
           </form>
         </div>

@@ -10,9 +10,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
 
   try {
-    const [data] = await supabaseRest<Encomenda[]>("encomendas", {
+    const [data] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       query: {
-        select: "*,moradores(id,nome,unidade,apto,torre,telefone)",
+        select: "*,moradores_v2(id,nome,apartamento,telefone,email,torre_id)",
         id: `eq.${id}`,
       },
     });
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
 
   try {
-    const [updated] = await supabaseRest<Encomenda[]>("encomendas", {
+    const [updated] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       method: "PATCH",
       query: { id: `eq.${id}` },
       body,
@@ -54,7 +54,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { id } = await params;
 
   try {
-    await supabaseRest<null>("encomendas", {
+    await supabaseRest<null>("encomendas_v2", {
       method: "DELETE",
       query: { id: `eq.${id}` },
       prefer: "return=minimal",
