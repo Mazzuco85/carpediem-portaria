@@ -3,16 +3,17 @@ import { ensureApiAuth } from "@/lib/api-auth";
 import { supabaseRest } from "@/lib/supabase";
 import type { MoradorV2 } from "@/lib/types";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(request: NextRequest, { params }: Ctx) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
 
+  const { id } = await params;
+
   try {
     const data = await supabaseRest<MoradorV2[]>("moradores_v2", {
-      query: { select: "*", id: `eq.${params.id}`, limit: "1" },
+      query: { select: "*", id: `eq.${id}`, limit: "1" },
     });
 
     const morador = Array.isArray(data) ? data[0] : null;
@@ -27,13 +28,11 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(request: NextRequest, { params }: Ctx) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
 
+  const { id } = await params;
   const body = await request.json().catch(() => null);
 
   const payload: Partial<MoradorV2> = {
@@ -48,7 +47,7 @@ export async function PATCH(
   try {
     const updated = await supabaseRest<MoradorV2[]>("moradores_v2", {
       method: "PATCH",
-      query: { id: `eq.${params.id}` },
+      query: { id: `eq.${id}` },
       body: payload,
     });
 
@@ -58,17 +57,16 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(request: NextRequest, { params }: Ctx) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
+
+  const { id } = await params;
 
   try {
     await supabaseRest("moradores_v2", {
       method: "DELETE",
-      query: { id: `eq.${params.id}` },
+      query: { id: `eq.${id}` },
     });
 
     return NextResponse.json({ ok: true });
