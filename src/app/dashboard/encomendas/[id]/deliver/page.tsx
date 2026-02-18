@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
+import type { Encomenda } from "@/lib/types";
 
 export default function DeliverEncomendaPage() {
   const router = useRouter();
@@ -12,8 +13,42 @@ export default function DeliverEncomendaPage() {
 
   const [retiradoPor, setRetiradoPor] = useState("");
   const [observacoesEntrega, setObservacoesEntrega] = useState("");
+  const [encomenda, setEncomenda] = useState<Encomenda | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadEncomenda = async () => {
+      try {
+        const response = await fetch(`/api/encomendas/${id}`, { cache: "no-store", signal: controller.signal });
+
+        if (!response.ok) {
+          setToast({ message: "Não foi possível carregar os dados da encomenda.", type: "error" });
+          return;
+        }
+
+        const data = (await response.json()) as Encomenda;
+        setEncomenda(data);
+      } catch {
+        if (!controller.signal.aborted) {
+          setToast({ message: "Não foi possível carregar os dados da encomenda.", type: "error" });
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadingInfo(false);
+        }
+      }
+    };
+
+    if (id) {
+      void loadEncomenda();
+    }
+
+    return () => controller.abort();
+  }, [id]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -59,6 +94,23 @@ export default function DeliverEncomendaPage() {
           <p className="page-intro">
             Registre quem retirou para manter histórico e reduzir risco de “sumiu e ninguém sabe”.
           </p>
+
+          {loadingInfo ? <div className="loading-state">Carregando dados da encomenda...</div> : null}
+
+          {encomenda ? (
+            <div className="entity-card" style={{ marginBottom: 14 }}>
+              <h3 style={{ marginBottom: 10 }}>Resumo da encomenda</h3>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div><b>Morador:</b> {encomenda.moradores_v2?.nome ?? "-"}</div>
+                <div><b>Apartamento:</b> {encomenda.moradores_v2?.apartamento ?? "-"}</div>
+                <div><b>Tipo:</b> {encomenda.tipo ?? "-"}</div>
+                <div><b>Código retirada:</b> {encomenda.codigo_retirada ?? "-"}</div>
+                <div><b>Código barras:</b> {encomenda.codigo_barras ?? "-"}</div>
+                <div><b>Descrição:</b> {encomenda.descricao ?? "-"}</div>
+                <div><b>Observações:</b> {encomenda.observacoes ?? "-"}</div>
+              </div>
+            </div>
+          ) : null}
 
           <form onSubmit={submit} className="form-grid">
             <div>

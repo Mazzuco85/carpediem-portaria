@@ -2,14 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureApiAuth } from "@/lib/api-auth";
 import { supabaseRest } from "@/lib/supabase";
 
+async function insertAuditLog(action: string, encomendaId: string | null, details: Record<string, unknown>) {
+  try {
+    await supabaseRest("audit_logs", {
+      method: "POST",
+      body: {
+        action,
+        encomenda_id: encomendaId,
+        details,
+      },
+    });
+  } catch {
+    // logging não deve quebrar fluxo principal
+  }
+}
+
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }, // <- importante p/ Vercel/Next types
+  context: { params: Promise<{ id: string }> },
 ) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
 
-  const { id } = await context.params; // <- importante
+  const { id } = await context.params;
 
   const body = await request.json().catch(() => null);
 
@@ -21,7 +36,7 @@ export async function POST(
   }
 
   try {
-    const [updated] = await supabaseRest<any[]>("encomendas_v2", {
+    const [updated] = await supabaseRest<unknown[]>("encomendas_v2", {
       method: "PATCH",
       query: { id: `eq.${id}` },
       body: {
@@ -30,6 +45,11 @@ export async function POST(
         entregue_por,
         observacoes_entrega: observacoes_entrega || null,
       },
+    });
+
+    await insertAuditLog("encomenda_entregue", id, {
+      entregue_por,
+      observacoes_entrega: observacoes_entrega || null,
     });
 
     return NextResponse.json(updated ?? { ok: true });

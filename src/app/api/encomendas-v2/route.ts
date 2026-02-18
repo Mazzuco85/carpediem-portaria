@@ -26,6 +26,21 @@ async function generateUniqueWithdrawalCode(): Promise<string> {
   throw new Error("Não foi possível gerar um código de retirada único.");
 }
 
+async function insertAuditLog(action: string, encomendaId: string | null, details: Record<string, unknown>) {
+  try {
+    await supabaseRest("audit_logs", {
+      method: "POST",
+      body: {
+        action,
+        encomenda_id: encomendaId,
+        details,
+      },
+    });
+  } catch {
+    // logging não deve quebrar fluxo principal
+  }
+}
+
 export async function GET(request: NextRequest) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
@@ -71,6 +86,12 @@ export async function POST(request: NextRequest) {
     const [created] = await supabaseRest<Encomenda[]>("encomendas_v2", {
       method: "POST",
       body: payload,
+    });
+
+    await insertAuditLog("encomenda_criada", created?.id ?? null, {
+      morador_id: body.morador_id,
+      tipo: body.tipo,
+      codigo_retirada: codigoRetirada,
     });
 
     return NextResponse.json(created, { status: 201 });

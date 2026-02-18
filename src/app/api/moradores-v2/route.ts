@@ -13,7 +13,7 @@ type MoradorV2 = {
   created_at?: string;
 };
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   // ✅ Auth desativado no localhost (se quiser reativar depois, descomente as 2 linhas abaixo)
   // const unauthorized = ensureApiAuth(request);
   // if (unauthorized) return unauthorized;
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(Array.isArray(data) ? data : []);
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: "Não foi possível carregar moradores agora. Tente novamente." },
       { status: 500 },
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(created?.[0] ?? null, { status: 201 });
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: "Não foi possível cadastrar este morador." },
       { status: 500 },

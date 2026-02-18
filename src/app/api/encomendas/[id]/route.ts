@@ -3,6 +3,21 @@ import { ensureApiAuth } from "@/lib/api-auth";
 import { supabaseRest } from "@/lib/supabase";
 import type { Encomenda } from "@/lib/types";
 
+async function insertAuditLog(action: string, encomendaId: string | null, details: Record<string, unknown>) {
+  try {
+    await supabaseRest("audit_logs", {
+      method: "POST",
+      body: {
+        action,
+        encomenda_id: encomendaId,
+        details,
+      },
+    });
+  } catch {
+    // logging não deve quebrar fluxo principal
+  }
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = ensureApiAuth(request);
   if (unauthorized) return unauthorized;
@@ -59,6 +74,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       query: { id: `eq.${id}` },
       prefer: "return=minimal",
     });
+
+    await insertAuditLog("encomenda_excluida", id, { deleted: true });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
