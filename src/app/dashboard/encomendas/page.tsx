@@ -16,22 +16,22 @@ export default function EncomendasPage() {
   const load = async () => {
     setLoading(true);
     setError(null);
+
     const response = await fetch("/api/encomendas", { cache: "no-store" });
+
     if (!response.ok) {
-      setError("Não foi possível carregar encomendas.");
+      const txt = await response.text().catch(() => "");
+      setError(txt || "Não foi possível carregar encomendas.");
       setLoading(false);
       return;
     }
+
     setEncomendas(await response.json());
     setLoading(false);
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void load();
-    }, 0);
-
-    return () => clearTimeout(timer);
+    void load();
   }, []);
 
   const filtered = useMemo(
@@ -41,7 +41,10 @@ export default function EncomendasPage() {
 
   const remove = async (id: string) => {
     const response = await fetch(`/api/encomendas/${id}`, { method: "DELETE" });
-    setToast({ message: response.ok ? "Encomenda removida." : "Falha ao remover encomenda.", type: response.ok ? "success" : "error" });
+    setToast({
+      message: response.ok ? "Encomenda removida." : "Falha ao remover encomenda.",
+      type: response.ok ? "success" : "error",
+    });
     void load();
   };
 
@@ -73,20 +76,50 @@ export default function EncomendasPage() {
               <article key={item.id} className="entity-card">
                 <div className="section-header">
                   <h3>{item.moradores_v2?.nome ?? "Morador"}</h3>
-                  <span className={`status-badge ${item.status}`}>{item.status.toUpperCase()}</span>
+                  <span className={`status-badge ${item.status}`}>{String(item.status).toUpperCase()}</span>
                 </div>
-                <p>{item.descricao}</p>
-                <p>{new Date(item.recebido_em).toLocaleString("pt-BR")}</p>
+
+                <p>{item.descricao ?? "Encomenda"}</p>
+
+                <p>{item.recebido_em ? new Date(item.recebido_em).toLocaleString("pt-BR") : ""}</p>
+
+                {/* Observações do recebimento */}
+                {item.observacoes ? (
+                  <p style={{ opacity: 0.9, marginTop: 8 }}>
+                    <b>Obs:</b> {item.observacoes}
+                  </p>
+                ) : null}
+
+                {/* Info da entrega */}
+                {item.status === "entregue" ? (
+                  <div style={{ marginTop: 10, opacity: 0.95 }}>
+                    {item.entregue_por ? (
+                      <p>
+                        <b>Retirado por:</b> {item.entregue_por}
+                      </p>
+                    ) : null}
+                    {item.observacoes_entrega ? (
+                      <p>
+                        <b>Obs entrega:</b> {item.observacoes_entrega}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <div className="actions-row">
                   {item.status === "pendente" ? (
                     <Link href={`/dashboard/encomendas/${item.id}/deliver`} className="button button-primary">
                       Entregar
                     </Link>
                   ) : null}
+
                   <Link href={`/dashboard/encomendas/${item.id}/whatsapp`} className="button button-secondary">
                     WhatsApp
                   </Link>
-                  <button className="button button-danger" onClick={() => remove(item.id)}>Excluir</button>
+
+                  <button className="button button-danger" onClick={() => remove(item.id)}>
+                    Excluir
+                  </button>
                 </div>
               </article>
             ))}
