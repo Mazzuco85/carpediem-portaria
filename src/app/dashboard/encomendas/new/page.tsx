@@ -154,7 +154,7 @@ export default function NewEncomendaPage() {
             <div>
               <h2>Nova encomenda</h2>
               <p className="page-intro">
-                Use <b>Observações</b> para casos sem código de barras ou retirada por terceiros (ex: “Deixado por X para Y”).
+                Use <b>Observações</b> quando não houver código de barras e para registrar contexto de recebimento (ex: “deixado por X para Y”).
               </p>
             </div>
             <button className="button button-secondary" onClick={() => setScannerOpen(true)}>
@@ -235,6 +235,9 @@ export default function NewEncomendaPage() {
 
             <div>
               <label htmlFor="observacoes">Observações / Comentários (opcional)</label>
+              <p style={{ opacity: 0.85, marginBottom: 8, fontSize: 12 }}>
+                Dica: sem código de barras, descreva aqui como identificar a encomenda e quem deixou.
+              </p>
               <textarea
                 id="observacoes"
                 value={observacoes}

@@ -6,6 +6,11 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
 import type { Encomenda } from "@/lib/types";
 
+type EncomendaListItem = Encomenda & {
+  entregue_por?: string | null;
+  observacoes_entrega?: string | null;
+};
+
 function formatDatePtBR(value?: string | null) {
   if (!value) return "";
   const d = new Date(value);
@@ -50,11 +55,13 @@ function Divider() {
 }
 
 export default function EncomendasPage() {
-  const [encomendas, setEncomendas] = useState<Encomenda[]>([]);
+  const [encomendas, setEncomendas] = useState<EncomendaListItem[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [quickFilter, setQuickFilter] = useState<"todos" | "pendente" | "entregue" | "hoje">("todos");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -70,18 +77,104 @@ export default function EncomendasPage() {
       return;
     }
 
-    setEncomendas(await response.json());
+    setEncomendas((await response.json()) as EncomendaListItem[]);
     setLoading(false);
   };
 
   useEffect(() => {
-    void load();
+    const timeoutId = window.setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
-  const filtered = useMemo(
-    () => encomendas.filter((item) => (statusFilter === "todos" ? true : item.status === statusFilter)),
-    [encomendas, statusFilter],
-  );
+  const filtered = useMemo(() => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const query = search.trim().toLocaleLowerCase("pt-BR");
+
+    return encomendas.filter((item) => {
+      const byDropdown = statusFilter === "todos" ? true : item.status === statusFilter;
+
+      const byQuickFilter =
+        quickFilter === "todos"
+          ? true
+          : quickFilter === "hoje"
+            ? (() => {
+                const recebido = new Date(item.recebido_em);
+                return !Number.isNaN(recebido.getTime()) && recebido >= start && recebido < end;
+              })()
+            : item.status === quickFilter;
+
+      if (!query) return byDropdown && byQuickFilter;
+
+      const searchable = [
+        item.moradores_v2?.nome,
+        item.moradores_v2?.apartamento,
+        item.codigo_retirada,
+        item.codigo_barras,
+        item.descricao,
+        item.observacoes,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("pt-BR");
+
+      return byDropdown && byQuickFilter && searchable.includes(query);
+    });
+  }, [encomendas, quickFilter, search, statusFilter]);
+
+  const exportCsv = () => {
+    const columns = [
+      "recebido_em",
+      "status",
+      "morador_nome",
+      "apartamento",
+      "tipo",
+      "codigo_retirada",
+      "codigo_barras",
+      "descricao",
+      "observacoes",
+      "entregue_em",
+      "entregue_por",
+      "observacoes_entrega",
+    ];
+
+    const escape = (value: unknown) => {
+      if (value == null) return "";
+      const text = String(value);
+      if (text.includes(",") || text.includes("\n") || text.includes('"')) {
+        return `"${text.replaceAll('"', '""')}"`;
+      }
+      return text;
+    };
+
+    const rows = filtered.map((item) => [
+      item.recebido_em ?? "",
+      item.status ?? "",
+      item.moradores_v2?.nome ?? "",
+      item.moradores_v2?.apartamento ?? "",
+      item.tipo ?? "",
+      item.codigo_retirada ?? "",
+      item.codigo_barras ?? "",
+      item.descricao ?? "",
+      item.observacoes ?? "",
+      item.entregue_em ?? "",
+      item.entregue_por ?? "",
+      item.observacoes_entrega ?? "",
+    ]);
+
+    const csv = [columns.join(","), ...rows.map((row) => row.map((cell) => escape(cell)).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `encomendas-filtradas-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   const remove = async (id: string) => {
     const response = await fetch(`/api/encomendas/${id}`, { method: "DELETE" });
@@ -112,6 +205,32 @@ export default function EncomendasPage() {
             </select>
           </div>
 
+          <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por morador, apto, código retirada, código barras, descrição ou observações"
+            />
+
+            <div className="actions-row" style={{ marginTop: 0 }}>
+              <button type="button" className="button button-secondary" onClick={() => setQuickFilter("pendente")}>
+                Pendentes
+              </button>
+              <button type="button" className="button button-secondary" onClick={() => setQuickFilter("entregue")}>
+                Entregues
+              </button>
+              <button type="button" className="button button-secondary" onClick={() => setQuickFilter("hoje")}>
+                Hoje
+              </button>
+              <button type="button" className="button" onClick={() => setQuickFilter("todos")}>
+                Limpar rápido
+              </button>
+              <button type="button" className="button button-primary" onClick={exportCsv}>
+                Exportar CSV
+              </button>
+            </div>
+          </div>
+
           {error ? <div className="banner">{error}</div> : null}
           {loading ? <div className="loading-state">Carregando encomendas...</div> : null}
           {!loading && !error && filtered.length === 0 ? (
@@ -126,10 +245,8 @@ export default function EncomendasPage() {
               const status = String(item.status ?? "").toLowerCase();
               const statusText = status ? status.toUpperCase() : "STATUS";
 
-              // Esses campos podem ou não existir no seu type,
-              // por isso uso "as any" para não travar o build.
-              const codigoRetirada = (item as any).codigo_retirada as string | null | undefined;
-              const codigoBarras = (item as any).codigo_barras as string | null | undefined;
+              const codigoRetirada = item.codigo_retirada;
+              const codigoBarras = item.codigo_barras;
 
               return (
                 <article key={item.id} className="entity-card" style={{ padding: 16 }}>
@@ -176,8 +293,8 @@ export default function EncomendasPage() {
                       <Divider />
                       <div style={{ opacity: 0.9, fontSize: 12, marginBottom: 6 }}>Entrega</div>
                       <Row label="Entregue em" value={formatDatePtBR(item.entregue_em)} />
-                      <Row label="Retirado por" value={(item as any).entregue_por ?? null} />
-                      {(item as any).observacoes_entrega ? (
+                      <Row label="Retirado por" value={item.entregue_por ?? null} />
+                      {item.observacoes_entrega ? (
                         <div
                           style={{
                             marginTop: 10,
@@ -189,7 +306,7 @@ export default function EncomendasPage() {
                             whiteSpace: "pre-wrap",
                           }}
                         >
-                          <b style={{ opacity: 0.9 }}>Obs entrega:</b> {(item as any).observacoes_entrega}
+                          <b style={{ opacity: 0.9 }}>Obs entrega:</b> {item.observacoes_entrega}
                         </div>
                       ) : null}
                     </>
