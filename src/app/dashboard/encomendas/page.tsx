@@ -19,39 +19,21 @@ function formatDatePtBR(value?: string | null) {
 }
 
 function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 10px",
-        borderRadius: 999,
-        border: "1px solid rgba(255,255,255,.14)",
-        background: "rgba(0,0,0,.18)",
-        fontSize: 12,
-        lineHeight: 1,
-        opacity: 0.95,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {children}
-    </span>
-  );
+  return <span className="meta-badge">{children}</span>;
 }
 
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "baseline", marginTop: 6 }}>
-      <div style={{ width: 110, opacity: 0.75, fontSize: 12 }}>{label}</div>
-      <div style={{ flex: 1, fontSize: 13 }}>{value}</div>
+    <div className="meta-row">
+      <div className="meta-label">{label}</div>
+      <div className="meta-value">{value}</div>
     </div>
   );
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: "rgba(255,255,255,.10)", marginTop: 12, marginBottom: 12 }} />;
+  return <div className="soft-divider" />;
 }
 
 export default function EncomendasPage() {
@@ -205,27 +187,27 @@ export default function EncomendasPage() {
             </select>
           </div>
 
-          <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+          <div className="filter-tools">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por morador, apto, código retirada, código barras, descrição ou observações"
             />
 
-            <div className="actions-row" style={{ marginTop: 0 }}>
-              <button type="button" className="button button-secondary" onClick={() => setQuickFilter("pendente")}>
+            <div className="quick-filter-row">
+              <button type="button" className={`button button-pill ${quickFilter === "pendente" ? "active" : ""}`} onClick={() => setQuickFilter("pendente")}>
                 Pendentes
               </button>
-              <button type="button" className="button button-secondary" onClick={() => setQuickFilter("entregue")}>
+              <button type="button" className={`button button-pill ${quickFilter === "entregue" ? "active" : ""}`} onClick={() => setQuickFilter("entregue")}>
                 Entregues
               </button>
-              <button type="button" className="button button-secondary" onClick={() => setQuickFilter("hoje")}>
+              <button type="button" className={`button button-pill ${quickFilter === "hoje" ? "active" : ""}`} onClick={() => setQuickFilter("hoje")}>
                 Hoje
               </button>
-              <button type="button" className="button" onClick={() => setQuickFilter("todos")}>
+              <button type="button" className={`button button-pill ${quickFilter === "todos" ? "active" : ""}`} onClick={() => setQuickFilter("todos")}>
                 Limpar rápido
               </button>
-              <button type="button" className="button button-primary" onClick={exportCsv}>
+              <button type="button" className="button button-primary button-pill" onClick={exportCsv}>
                 Exportar CSV
               </button>
             </div>
@@ -249,11 +231,11 @@ export default function EncomendasPage() {
               const codigoBarras = item.codigo_barras;
 
               return (
-                <article key={item.id} className="entity-card" style={{ padding: 16 }}>
-                  <div className="section-header" style={{ marginBottom: 8 }}>
+                <article key={item.id} className="entity-card">
+                  <div className="section-header">
                     <div style={{ minWidth: 0 }}>
-                      <h3 style={{ marginBottom: 4 }}>{nome}</h3>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <h3>{nome}</h3>
+                      <div className="actions-row" style={{ marginTop: 0 }}>
                         {apto ? <Badge>🏠 Apto {apto}</Badge> : null}
                         {tipo ? <Badge>📦 {tipo}</Badge> : null}
                         {codigoRetirada ? <Badge>🔎 Retirada {codigoRetirada}</Badge> : null}
@@ -261,7 +243,7 @@ export default function EncomendasPage() {
                       </div>
                     </div>
 
-                    <span className={`status-badge ${status}`} style={{ alignSelf: "flex-start" }}>
+                    <span className={`status-badge ${status || "default"}`} style={{ alignSelf: "flex-start" }}>
                       {statusText}
                     </span>
                   </div>
@@ -272,17 +254,8 @@ export default function EncomendasPage() {
                   {item.observacoes ? (
                     <>
                       <Divider />
-                      <div style={{ opacity: 0.9, fontSize: 12, marginBottom: 4 }}>Observações (recebimento)</div>
-                      <div
-                        style={{
-                          padding: 12,
-                          borderRadius: 12,
-                          border: "1px solid rgba(255,255,255,.12)",
-                          background: "rgba(0,0,0,.16)",
-                          fontSize: 13,
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
+                      <div className="helper-text">Observações (recebimento)</div>
+                      <div className="note-box">
                         {item.observacoes}
                       </div>
                     </>
@@ -291,28 +264,18 @@ export default function EncomendasPage() {
                   {status === "entregue" ? (
                     <>
                       <Divider />
-                      <div style={{ opacity: 0.9, fontSize: 12, marginBottom: 6 }}>Entrega</div>
+                      <div className="helper-text">Entrega</div>
                       <Row label="Entregue em" value={formatDatePtBR(item.entregue_em)} />
                       <Row label="Retirado por" value={item.entregue_por ?? null} />
                       {item.observacoes_entrega ? (
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: 12,
-                            borderRadius: 12,
-                            border: "1px solid rgba(255,255,255,.12)",
-                            background: "rgba(0,0,0,.12)",
-                            fontSize: 13,
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          <b style={{ opacity: 0.9 }}>Obs entrega:</b> {item.observacoes_entrega}
+                        <div className="note-box" style={{ marginTop: 10 }}>
+                          <b>Obs entrega:</b> {item.observacoes_entrega}
                         </div>
                       ) : null}
                     </>
                   ) : null}
 
-                  <div className="actions-row" style={{ marginTop: 14 }}>
+                  <div className="actions-row">
                     {status === "pendente" ? (
                       <Link href={`/dashboard/encomendas/${item.id}/deliver`} className="button button-primary">
                         Entregar

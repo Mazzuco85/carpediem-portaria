@@ -29,7 +29,7 @@ export default function WhatsappPage() {
     <main className="container dashboard-layout">
       <DashboardNav />
       <section className="dashboard-content">
-        <div className="card">
+        <div className="card glass-panel">
           <h2>Notificação por WhatsApp</h2>
           <p className="page-intro">Gere um link com mensagem pronta para avisar o morador.</p>
           {error ? <div className="banner">{error}</div> : null}

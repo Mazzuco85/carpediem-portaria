@@ -32,10 +32,10 @@ export default function LoginPage() {
     <main className="login-shell">
       <div className="card login-card glass-panel">
         <div className="login-logo">
-          <CdMonogram size={56} />
+          <CdMonogram size={90} />
           <div>
-            <h1 style={{ margin: 0 }}>CarpeDiem Residences | Portaria</h1>
-            <p className="page-intro" style={{ marginBottom: 0 }}>Acesse a operação premium da portaria.</p>
+            <h1>CarpeDiem Residences | Portaria</h1>
+            <p className="page-intro">Acesse a operação premium da portaria.</p>
           </div>
         </div>
         <form onSubmit={onSubmit} className="form-grid">

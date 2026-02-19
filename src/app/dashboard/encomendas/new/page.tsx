@@ -235,7 +235,7 @@ export default function NewEncomendaPage() {
 
             <div>
               <label htmlFor="observacoes">Observações / Comentários (opcional)</label>
-              <p style={{ opacity: 0.85, marginBottom: 8, fontSize: 12 }}>
+              <p className="helper-text">
                 Dica: sem código de barras, descreva aqui como identificar a encomenda e quem deixou.
               </p>
               <textarea
@@ -260,7 +260,7 @@ export default function NewEncomendaPage() {
             <h2>Scanner de rastreio</h2>
             <p className="page-intro">Cole o código abaixo (leitor de código de barras também funciona aqui).</p>
             <input value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Código de barras" autoFocus />
-            <div className="actions-row" style={{ marginTop: "1rem" }}>
+            <div className="actions-row">
               <button className="button button-primary" onClick={() => setScannerOpen(false)}>
                 Aplicar código
               </button>

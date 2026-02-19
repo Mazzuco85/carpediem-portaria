@@ -39,19 +39,22 @@ export default async function TorresPage() {
     }));
 
   return (
-    <main className="p-6">
-      <h1 className="mb-4 text-2xl font-semibold">Torres</h1>
-      {error ? (
-        <p className="text-red-600">{error}</p>
-      ) : (
-        <ul className="list-disc space-y-1 pl-6">
-          {torres.map((torre) => (
-            <li key={torre.codigo}>
-              {torre.codigo} - {torre.nome}
-            </li>
-          ))}
-        </ul>
-      )}
+    <main className="simple-page">
+      <section className="card glass-panel simple-page-card">
+        <h1>Torres</h1>
+        <p className="page-intro">Consulta de torres cadastradas no condomínio.</p>
+        {error ? (
+          <p className="banner">{error}</p>
+        ) : (
+          <ul className="form-grid">
+            {torres.map((torre) => (
+              <li key={torre.codigo} className="entity-card">
+                {torre.codigo} - {torre.nome}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
