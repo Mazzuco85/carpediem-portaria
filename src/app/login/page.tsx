@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CdMonogram } from "@/components/cd-monogram";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function LoginPage() {
     <main className="login-shell">
       <div className="card login-card glass-panel">
         <div className="login-logo">
-          <CdMonogram size={90} />
+          <BrandLogo size="login" priority />
           <div>
             <h1>CarpeDiem Residences | Portaria</h1>
             <p className="page-intro">Acesse a operação premium da portaria.</p>

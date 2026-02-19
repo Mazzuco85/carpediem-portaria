@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CdMonogram } from "@/components/cd-monogram";
+import { BrandLogo } from "@/components/brand-logo";
 import type { Encomenda, MoradorV2 } from "@/lib/types";
 
 const links = [
   { href: "/dashboard", label: "Visão geral", icon: "◈" },
   { href: "/dashboard/moradores", label: "Moradores", icon: "◉" },
   { href: "/dashboard/encomendas", label: "Encomendas", icon: "◫" },
-  { href: "/dashboard/encomendas/new", label: "Nova encomenda", icon: "✦" },
+  { href: "/dashboard/encomendas/new", label: "Nova Encomenda", icon: "✦" },
 ];
 
 export function DashboardNav() {
@@ -82,7 +82,7 @@ export function DashboardNav() {
     <>
       <header className="app-header glass-panel">
         <div className="brand-row">
-          <CdMonogram size={42} />
+          <BrandLogo size="sidebar" priority />
           <div>
             <p className="app-subtitle">CarpeDiem Residences | Portaria</p>
             <h1 className="app-title">Operação Concierge</h1>
