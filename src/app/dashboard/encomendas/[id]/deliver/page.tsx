@@ -99,8 +99,8 @@ export default function DeliverEncomendaPage() {
 
           {encomenda ? (
             <div className="entity-card" style={{ marginBottom: 14 }}>
-              <h3 style={{ marginBottom: 10 }}>Resumo da encomenda</h3>
-              <div style={{ display: "grid", gap: 8 }}>
+              <h3>Resumo da encomenda</h3>
+              <div className="form-grid">
                 <div><b>Morador:</b> {encomenda.moradores_v2?.nome ?? "-"}</div>
                 <div><b>Apartamento:</b> {encomenda.moradores_v2?.apartamento ?? "-"}</div>
                 <div><b>Tipo:</b> {encomenda.tipo ?? "-"}</div>
