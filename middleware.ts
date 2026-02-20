@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, buildSessionToken } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, isAuthenticatedRequest } from "@/lib/auth";
 
-const publicRoutes = ["/login", "/api/auth/login"];
+const PUBLIC_ROUTES = new Set(["/login", "/api/auth/login"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.startsWith("/public") ||
-    pathname.match(/\.(.*)$/)
-  ) {
-    return NextResponse.next();
-  }
-
-  const isPublic = publicRoutes.some((route) => pathname === route);
-  const isAuthenticated = request.cookies.get(AUTH_COOKIE_NAME)?.value === buildSessionToken();
+  const isPublic = PUBLIC_ROUTES.has(pathname);
+  const isAuthenticated = isAuthenticatedRequest(request);
 
   if (!isAuthenticated && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -30,5 +21,12 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/:path*"],
+  matcher: [
+    /*
+     * Executa o middleware apenas em rotas relevantes.
+     * Exclui automaticamente: _next/static, _next/image, favicon, arquivos com extensão.
+     * Isso substitui os pathname.startsWith() manuais que estavam no corpo do middleware.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).+)",
+  ],
 };
