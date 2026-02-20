@@ -53,27 +53,55 @@ export default function DeliverEncomendaPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!retiradoPor.trim()) {
+    const retiradoPorLimpo = retiradoPor.trim();
+    const observacoesEntregaLimpa = observacoesEntrega.trim();
+
+    if (!retiradoPorLimpo) {
       setToast({ message: "Informe quem retirou a encomenda.", type: "error" });
       return;
     }
 
     setLoading(true);
 
-    const response = await fetch(`/api/encomendas/${id}/deliver`, {
+    const deliverResponse = await fetch(`/api/encomendas/${id}/deliver`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        entregue_por: retiradoPor.trim(),
-        observacoes_entrega: observacoesEntrega.trim() || null,
+        entregue_por: retiradoPorLimpo,
+        observacoes_entrega: observacoesEntregaLimpa || null,
       }),
     });
 
-    if (!response.ok) {
+    if (!deliverResponse.ok) {
       setToast({ message: "Não foi possível confirmar entrega.", type: "error" });
       setLoading(false);
       return;
     }
+
+    const whatsappResponse = await fetch(`/api/encomendas/${id}/whatsapp`, { method: "POST" });
+
+    if (!whatsappResponse.ok) {
+      setToast({ message: "Entrega confirmada, mas não foi possível abrir o WhatsApp.", type: "error" });
+      setLoading(false);
+      return;
+    }
+
+    const whatsappData = (await whatsappResponse.json()) as { phone?: string; message?: string };
+    const telefone = whatsappData.phone ?? "";
+    const mensagemBase = whatsappData.message ?? "";
+
+    if (!telefone || !mensagemBase) {
+      setToast({ message: "Entrega confirmada, mas faltam dados para abrir o WhatsApp.", type: "error" });
+      setLoading(false);
+      return;
+    }
+
+    const mensagemEntrega = observacoesEntregaLimpa
+      ? ` Retirado por: ${retiradoPorLimpo}. Obs: ${observacoesEntregaLimpa}`
+      : ` Retirado por: ${retiradoPorLimpo}.`;
+
+    const whatsappUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(`${mensagemBase}${mensagemEntrega}`)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
     setToast({ message: "Entrega confirmada com sucesso.", type: "success" });
 
@@ -134,7 +162,7 @@ export default function DeliverEncomendaPage() {
             </div>
 
             <button className="button button-primary" type="submit" disabled={loading}>
-              {loading ? "Confirmando..." : "Confirmar entrega"}
+              {loading ? "Confirmando..." : "Confirmar entrega e abrir WhatsApp"}
             </button>
           </form>
         </div>
