@@ -53,7 +53,8 @@ export async function POST(
     });
 
     return NextResponse.json(updated ?? { ok: true });
-  } catch {
-    return NextResponse.json({ error: "Não foi possível confirmar entrega." }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Não foi possível confirmar entrega.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
