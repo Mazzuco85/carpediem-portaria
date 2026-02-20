@@ -6,6 +6,22 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
 import type { Encomenda } from "@/lib/types";
 
+async function extractErrorMessage(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    const message = payload?.error;
+
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  const text = await response.text().catch(() => "");
+  return text.trim();
+}
+
 export default function DeliverEncomendaPage() {
   const router = useRouter();
   const params = useParams();
@@ -53,27 +69,57 @@ export default function DeliverEncomendaPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!retiradoPor.trim()) {
+    const retiradoPorLimpo = retiradoPor.trim();
+    const observacoesEntregaLimpa = observacoesEntrega.trim();
+
+    if (!retiradoPorLimpo) {
       setToast({ message: "Informe quem retirou a encomenda.", type: "error" });
       return;
     }
 
     setLoading(true);
 
-    const response = await fetch(`/api/encomendas/${id}/deliver`, {
+    const deliverResponse = await fetch(`/api/encomendas/${id}/deliver`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        entregue_por: retiradoPor.trim(),
-        observacoes_entrega: observacoesEntrega.trim() || null,
+        entregue_por: retiradoPorLimpo,
+        observacoes_entrega: observacoesEntregaLimpa || null,
       }),
     });
 
-    if (!response.ok) {
-      setToast({ message: "Não foi possível confirmar entrega.", type: "error" });
+    if (!deliverResponse.ok) {
+      const deliverError = await extractErrorMessage(deliverResponse);
+      const message = deliverError ? `Falha: ${deliverError}` : "Não foi possível confirmar entrega.";
+      setToast({ message, type: "error" });
       setLoading(false);
       return;
     }
+
+    const whatsappResponse = await fetch(`/api/encomendas/${id}/whatsapp`, { method: "POST" });
+
+    if (!whatsappResponse.ok) {
+      setToast({ message: "Entrega confirmada, mas não foi possível abrir o WhatsApp.", type: "error" });
+      setLoading(false);
+      return;
+    }
+
+    const whatsappData = (await whatsappResponse.json()) as { phone?: string; message?: string };
+    const telefone = whatsappData.phone ?? "";
+    const mensagemBase = whatsappData.message ?? "";
+
+    if (!telefone || !mensagemBase) {
+      setToast({ message: "Entrega confirmada, mas faltam dados para abrir o WhatsApp.", type: "error" });
+      setLoading(false);
+      return;
+    }
+
+    const mensagemEntrega = observacoesEntregaLimpa
+      ? ` Retirado por: ${retiradoPorLimpo}. Obs: ${observacoesEntregaLimpa}`
+      : ` Retirado por: ${retiradoPorLimpo}.`;
+
+    const whatsappUrl = `https://wa.me/${telefone}?text=${encodeURIComponent(`${mensagemBase}${mensagemEntrega}`)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
     setToast({ message: "Entrega confirmada com sucesso.", type: "success" });
 
@@ -134,7 +180,7 @@ export default function DeliverEncomendaPage() {
             </div>
 
             <button className="button button-primary" type="submit" disabled={loading}>
-              {loading ? "Confirmando..." : "Confirmar entrega"}
+              {loading ? "Confirmando..." : "Confirmar entrega e abrir WhatsApp"}
             </button>
           </form>
         </div>
