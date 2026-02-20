@@ -6,6 +6,22 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Toast } from "@/components/toast";
 import type { Encomenda } from "@/lib/types";
 
+async function extractErrorMessage(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    const message = payload?.error;
+
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  const text = await response.text().catch(() => "");
+  return text.trim();
+}
+
 export default function DeliverEncomendaPage() {
   const router = useRouter();
   const params = useParams();
@@ -73,7 +89,9 @@ export default function DeliverEncomendaPage() {
     });
 
     if (!deliverResponse.ok) {
-      setToast({ message: "Não foi possível confirmar entrega.", type: "error" });
+      const deliverError = await extractErrorMessage(deliverResponse);
+      const message = deliverError ? `Falha: ${deliverError}` : "Não foi possível confirmar entrega.";
+      setToast({ message, type: "error" });
       setLoading(false);
       return;
     }
