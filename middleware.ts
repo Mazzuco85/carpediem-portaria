@@ -1,34 +1,34 @@
-import { NextRequest, NextResponse } from “next/server”;
+import { NextRequest, NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME, buildSessionToken } from "@/lib/auth";
 
-const AUTH_COOKIE_NAME = “portaria_session”;
-const PUBLIC_ROUTES = new Set([”/login”, “/api/auth/login”]);
+const publicRoutes = ["/login", "/api/auth/login"];
 
-/**
-
-- O middleware apenas verifica se o cookie de sessão existe e tem formato válido.
-- A validação criptográfica real acontece nos Route Handlers (Node.js runtime),
-- onde o módulo crypto está disponível.
-  */
-  export function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-const isPublic = PUBLIC_ROUTES.has(pathname);
-const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/public") ||
+    pathname.match(/\.(.*)$/)
+  ) {
+    return NextResponse.next();
+  }
 
-// Cookie válido = existe e tem 64 caracteres hex (HMAC-SHA256)
-const isAuthenticated = typeof token === “string” && /^[a-f0-9]{64}$/.test(token);
+  const isPublic = publicRoutes.some((route) => pathname === route);
+  const isAuthenticated = request.cookies.get(AUTH_COOKIE_NAME)?.value === buildSessionToken();
 
-if (!isAuthenticated && !isPublic) {
-return NextResponse.redirect(new URL(”/login”, request.url));
-}
+  if (!isAuthenticated && !isPublic) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-if (isAuthenticated && pathname === “/login”) {
-return NextResponse.redirect(new URL(”/dashboard”, request.url));
-}
+  if (isAuthenticated && pathname === "/login") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
 
-return NextResponse.next();
+  return NextResponse.next();
 }
 
 export const config = {
-matcher: [”/((?!_next/static|_next/image|favicon.ico|.*\..*).+)”],
+  matcher: ["/:path*"],
 };
