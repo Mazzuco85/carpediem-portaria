@@ -1,38 +1,11 @@
-import { randomInt } from “crypto”;
 import { NextRequest, NextResponse } from “next/server”;
 import { ensureApiAuth } from “@/lib/api-auth”;
 import { supabaseRest } from “@/lib/supabase”;
 import type { Encomenda } from “@/lib/types”;
 
-// Colunas que a UI realmente precisa — sem over-fetching
+// Mesma constante do route principal — manter sincronizado
 const ENCOMENDA_SELECT =
 “id,tipo,status,descricao,codigo_barras,observacoes,recebido_em,entregue_em,codigo_retirada,morador_id,moradores_v2(id,nome,apartamento,telefone,torre_id)”;
-
-const MAX_CODE_ATTEMPTS = 5;
-
-/**
-
-- Gera código de retirada único tentando inserir diretamente no banco.
-- Aproveita a constraint UNIQUE de codigo_retirada — sem round-trip de
-- verificação prévia. Só consulta o banco na rara eventualidade de colisão.
-  */
-  async function generateUniqueWithdrawalCode(): Promise<string> {
-  for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
-  const code = randomInt(0, 1_000_000).toString().padStart(6, “0”);
-  
-  const existing = await supabaseRest<Array<{ id: string }>>(“encomendas_v2”, {
-  query: {
-  select: “id”,
-  codigo_retirada: `eq.${code}`,
-  limit: 1,
-  },
-  });
-  
-  if (existing.length === 0) return code;
-  }
-
-throw new Error(“Não foi possível gerar um código de retirada único.”);
-}
 
 async function insertAuditLog(
 action: string,
@@ -49,19 +22,28 @@ body: { action, encomenda_id: encomendaId, details },
 }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(
+request: NextRequest,
+{ params }: { params: Promise<{ id: string }> }
+) {
 const unauthorized = ensureApiAuth(request);
 if (unauthorized) return unauthorized;
 
+const { id } = await params;
+
 try {
-const data = await supabaseRest<Encomenda[]>(“encomendas_v2”, {
+const [data] = await supabaseRest<Encomenda[]>(“encomendas_v2”, {
 query: {
 select: ENCOMENDA_SELECT,
-order: “recebido_em.desc”,
+id: `eq.${id}`,
 },
 });
 
 ```
+if (!data) {
+  return NextResponse.json({ error: "Encomenda não encontrada." }, { status: 404 });
+}
+
 return NextResponse.json(data);
 ```
 
@@ -70,46 +52,60 @@ return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 }
 }
 
-export async function POST(request: NextRequest) {
+export async function PATCH(
+request: NextRequest,
+{ params }: { params: Promise<{ id: string }> }
+) {
 const unauthorized = ensureApiAuth(request);
 if (unauthorized) return unauthorized;
 
 const body = await request.json().catch(() => null);
+const { id } = await params;
 
-if (!body?.morador_id || !body?.tipo) {
-return NextResponse.json(
-{ error: “morador_id e tipo são obrigatórios.” },
-{ status: 400 }
-);
+if (!body || Object.keys(body).length === 0) {
+return NextResponse.json({ error: “Nenhum campo para atualizar.” }, { status: 400 });
 }
 
 try {
-const codigoRetirada = await generateUniqueWithdrawalCode();
+const [updated] = await supabaseRest<Encomenda[]>(“encomendas_v2”, {
+method: “PATCH”,
+query: { id: `eq.${id}`, select: ENCOMENDA_SELECT },
+body,
+});
 
 ```
-const payload: Record<string, unknown> = {
-  morador_id: body.morador_id,
-  descricao: body.descricao ?? `Encomenda (${body.tipo})`,
-  codigo_barras: body.codigo_barras ?? null,
-  tipo: body.tipo,
-  observacoes: body.observacoes ?? null,
-  status: "pendente",
-  recebido_em: new Date().toISOString(),
-  codigo_retirada: codigoRetirada,
-};
+if (!updated) {
+  return NextResponse.json({ error: "Encomenda não encontrada." }, { status: 404 });
+}
 
-const [created] = await supabaseRest<Encomenda[]>("encomendas_v2", {
-  method: "POST",
-  body: payload,
+return NextResponse.json(updated);
+```
+
+} catch (error) {
+return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+}
+}
+
+export async function DELETE(
+request: NextRequest,
+{ params }: { params: Promise<{ id: string }> }
+) {
+const unauthorized = ensureApiAuth(request);
+if (unauthorized) return unauthorized;
+
+const { id } = await params;
+
+try {
+await supabaseRest<null>(“encomendas_v2”, {
+method: “DELETE”,
+query: { id: `eq.${id}` },
+prefer: “return=minimal”,
 });
 
-await insertAuditLog("encomenda_criada", created?.id ?? null, {
-  morador_id: body.morador_id,
-  tipo: body.tipo,
-  codigo_retirada: codigoRetirada,
-});
+```
+await insertAuditLog("encomenda_excluida", id, { deleted: true });
 
-return NextResponse.json(created, { status: 201 });
+return NextResponse.json({ ok: true });
 ```
 
 } catch (error) {
