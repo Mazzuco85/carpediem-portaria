@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 
 const AUTH_COOKIE_NAME = "portaria_session";
