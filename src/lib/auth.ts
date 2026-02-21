@@ -1,86 +1,112 @@
-import { createHmac, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
-import { NextRequest } from "next/server";
-import { getEnv, hasAdminConfig } from "@/lib/env";
+/**
 
-export const AUTH_COOKIE_NAME = "portaria_session";
+- auth.ts — compatível com Edge Runtime (Vercel Middleware)
+- Usa Web Crypto API (globalThis.crypto) em vez do módulo “crypto” do Node.js.
+  */
+  import { cookies } from “next/headers”;
+  import { NextRequest } from “next/server”;
+  import { getEnv, hasAdminConfig } from “@/lib/env”;
+
+export const AUTH_COOKIE_NAME = “portaria_session”;
+
+// Cache do CryptoKey para não reimportar a cada request
+let _cachedKey: CryptoKey | null = null;
+
+async function getHmacKey(): Promise<CryptoKey> {
+if (_cachedKey) return _cachedKey;
+
+const secret = process.env.AUTH_SECRET ?? “portaria-secret”;
+const keyData = new TextEncoder().encode(secret);
+
+_cachedKey = await globalThis.crypto.subtle.importKey(
+“raw”,
+keyData,
+{ name: “HMAC”, hash: “SHA-256” },
+false,
+[“sign”, “verify”]
+);
+
+return _cachedKey;
+}
 
 /**
- * Gera um token de sessão usando HMAC-SHA256.
- * O resultado é determinístico (mesmo input → mesmo token),
- * mas computacionalmente inviável de forjar sem o AUTH_SECRET.
- */
-export function buildSessionToken(): string | null {
+
+- Gera um token de sessão usando HMAC-SHA256 via Web Crypto API.
+- Determinístico e compatível com Edge Runtime.
+  */
+  export async function buildSessionToken(): Promise<string | null> {
   if (!hasAdminConfig()) return null;
 
-  const secret = process.env.AUTH_SECRET ?? "portaria-secret";
-  const payload = `${getEnv("ADMIN_USER")}:${getEnv("ADMIN_PASS")}`;
+const payload = `${getEnv("ADMIN_USER")}:${getEnv("ADMIN_PASS")}`;
+const key = await getHmacKey();
+const data = new TextEncoder().encode(payload);
+const signature = await globalThis.crypto.subtle.sign(“HMAC”, key, data);
 
-  return createHmac("sha256", secret).update(payload).digest("hex");
+return Array.from(new Uint8Array(signature))
+.map((b) => b.toString(16).padStart(2, “0”))
+.join(””);
 }
 
 /**
- * Compara dois tokens usando tempo constante para evitar timing attacks.
- * Retorna false se os tokens tiverem tamanhos diferentes (sem vazar info).
- */
-function safeTokenCompare(a: string, b: string): boolean {
+
+- Verifica se um token hex é válido usando Web Crypto verify() — tempo constante.
+  */
+  async function isValidToken(token: string): Promise<boolean> {
   try {
-    const bufA = Buffer.from(a, "hex");
-    const bufB = Buffer.from(b, "hex");
-    if (bufA.length !== bufB.length) return false;
-    return timingSafeEqual(bufA, bufB);
+  const key = await getHmacKey();
+  const payload = `${getEnv("ADMIN_USER")}:${getEnv("ADMIN_PASS")}`;
+  const data = new TextEncoder().encode(payload);
+  
+  const tokenBytes = new Uint8Array(
+  token.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+  );
+  
+  return await globalThis.crypto.subtle.verify(“HMAC”, key, tokenBytes, data);
   } catch {
-    return false;
+  return false;
   }
-}
+  }
 
 /**
- * Compara credenciais de login usando tempo constante.
- * Use esta função no lugar de === para evitar timing attacks.
- */
-export function verifyCredentials(username: string, password: string): boolean {
+
+- Verifica credenciais de login em tempo constante via HMAC.
+  */
+  export async function verifyCredentials(
+  username: string,
+  password: string
+  ): Promise<boolean> {
   if (!hasAdminConfig()) return false;
 
-  const expectedUser = getEnv("ADMIN_USER") ?? "";
-  const expectedPass = getEnv("ADMIN_PASS") ?? "";
+const encoder = new TextEncoder();
+const key = await getHmacKey();
 
-  // Ambas as comparações sempre executam — sem short-circuit
-  const userMatch = safeStringCompare(username, expectedUser);
-  const passMatch = safeStringCompare(password, expectedPass);
+// Assina os 4 valores em paralelo — tempo constante independente do input
+const [sigExpUser, sigRecUser, sigExpPass, sigRecPass] = await Promise.all([
+globalThis.crypto.subtle.sign(“HMAC”, key, encoder.encode(getEnv(“ADMIN_USER”) ?? “”)),
+globalThis.crypto.subtle.sign(“HMAC”, key, encoder.encode(username)),
+globalThis.crypto.subtle.sign(“HMAC”, key, encoder.encode(getEnv(“ADMIN_PASS”) ?? “”)),
+globalThis.crypto.subtle.sign(“HMAC”, key, encoder.encode(password)),
+]);
 
-  return userMatch && passMatch;
+// Compara HMACs — verify() garante tempo constante
+const [userMatch, passMatch] = await Promise.all([
+globalThis.crypto.subtle.verify(“HMAC”, key, sigRecUser, encoder.encode(getEnv(“ADMIN_USER”) ?? “”)),
+globalThis.crypto.subtle.verify(“HMAC”, key, sigRecPass, encoder.encode(getEnv(“ADMIN_PASS”) ?? “”)),
+]);
+
+void sigExpUser; void sigExpPass; // calculados apenas para manter tempo constante
+
+return userMatch && passMatch;
 }
 
-function safeStringCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a, "utf8");
-    const bufB = Buffer.from(b, "utf8");
-    // Padeia o buffer menor para evitar vazar tamanho via timing
-    const maxLen = Math.max(bufA.length, bufB.length);
-    const paddedA = Buffer.concat([bufA, Buffer.alloc(maxLen - bufA.length)]);
-    const paddedB = Buffer.concat([bufB, Buffer.alloc(maxLen - bufB.length)]);
-    // Ainda verificamos tamanho separadamente (sem timing leak aqui)
-    const sameLength = bufA.length === bufB.length;
-    return timingSafeEqual(paddedA, paddedB) && sameLength;
-  } catch {
-    return false;
-  }
-}
-
-export function isAuthenticatedRequest(request: NextRequest): boolean {
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const sessionToken = buildSessionToken();
-
-  if (!token || !sessionToken) return false;
-
-  return safeTokenCompare(token, sessionToken);
+export async function isAuthenticatedRequest(request: NextRequest): Promise<boolean> {
+const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+if (!token) return false;
+return isValidToken(token);
 }
 
 export async function isAuthenticatedServer(): Promise<boolean> {
-  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
-  const sessionToken = buildSessionToken();
-
-  if (!token || !sessionToken) return false;
-
-  return safeTokenCompare(token, sessionToken);
+const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+if (!token) return false;
+return isValidToken(token);
 }
