@@ -5,10 +5,6 @@ import { getEnv, hasAdminConfig } from "@/lib/env";
 export const AUTH_COOKIE_NAME = "portaria_session";
 
 function toBase64Url(value: string): string {
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(value, "utf8").toString("base64url");
-  }
-
   return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
