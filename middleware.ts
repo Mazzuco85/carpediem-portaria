@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, buildSessionToken } from "@/lib/auth";
 
+const AUTH_COOKIE_NAME = "portaria_session";
 const publicRoutes = ["/login", "/api/auth/login"];
 
 export function middleware(request: NextRequest) {
@@ -16,7 +16,8 @@ export function middleware(request: NextRequest) {
   }
 
   const isPublic = publicRoutes.some((route) => pathname === route);
-  const isAuthenticated = request.cookies.get(AUTH_COOKIE_NAME)?.value === buildSessionToken();
+  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const isAuthenticated = typeof token === "string" && token.length > 10;
 
   if (!isAuthenticated && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
