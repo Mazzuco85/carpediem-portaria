@@ -1,114 +1,84 @@
-import { NextRequest, NextResponse } from “next/server”;
-import { ensureApiAuth } from “@/lib/api-auth”;
-import { supabaseRest } from “@/lib/supabase”;
-import type { Encomenda } from “@/lib/types”;
+import { NextRequest, NextResponse } from "next/server";
+import { ensureApiAuth } from "@/lib/api-auth";
+import { supabaseRest } from "@/lib/supabase";
+import type { Encomenda } from "@/lib/types";
 
-// Mesma constante do route principal — manter sincronizado
-const ENCOMENDA_SELECT =
-“id,tipo,status,descricao,codigo_barras,observacoes,recebido_em,entregue_em,codigo_retirada,morador_id,moradores_v2(id,nome,apartamento,telefone,torre_id)”;
-
-async function insertAuditLog(
-action: string,
-encomendaId: string | null,
-details: Record<string, unknown>
-) {
-try {
-await supabaseRest(“audit_logs”, {
-method: “POST”,
-body: { action, encomenda_id: encomendaId, details },
-});
-} catch {
-// logging não deve quebrar fluxo principal
-}
+async function insertAuditLog(action: string, encomendaId: string | null, details: Record<string, unknown>) {
+  try {
+    await supabaseRest("audit_logs", {
+      method: "POST",
+      body: {
+        action,
+        encomenda_id: encomendaId,
+        details,
+      },
+    });
+  } catch {
+    // logging não deve quebrar fluxo principal
+  }
 }
 
-export async function GET(
-request: NextRequest,
-{ params }: { params: Promise<{ id: string }> }
-) {
-const unauthorized = ensureApiAuth(request);
-if (unauthorized) return unauthorized;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = ensureApiAuth(request);
+  if (unauthorized) return unauthorized;
 
-const { id } = await params;
+  const { id } = await params;
 
-try {
-const [data] = await supabaseRest<Encomenda[]>(“encomendas_v2”, {
-query: {
-select: ENCOMENDA_SELECT,
-id: `eq.${id}`,
-},
-});
+  try {
+    const [data] = await supabaseRest<Encomenda[]>("encomendas_v2", {
+      query: {
+        select: "*,moradores_v2(id,nome,apartamento,telefone,email,torre_id)",
+        id: `eq.${id}`,
+      },
+    });
 
-```
-if (!data) {
-  return NextResponse.json({ error: "Encomenda não encontrada." }, { status: 404 });
+    if (!data) {
+      return NextResponse.json({ error: "Encomenda não encontrada." }, { status: 404 });
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
 }
 
-return NextResponse.json(data);
-```
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = ensureApiAuth(request);
+  if (unauthorized) return unauthorized;
 
-} catch (error) {
-return NextResponse.json({ error: (error as Error).message }, { status: 500 });
-}
-}
+  const body = await request.json().catch(() => null);
+  const { id } = await params;
 
-export async function PATCH(
-request: NextRequest,
-{ params }: { params: Promise<{ id: string }> }
-) {
-const unauthorized = ensureApiAuth(request);
-if (unauthorized) return unauthorized;
+  try {
+    const [updated] = await supabaseRest<Encomenda[]>("encomendas_v2", {
+      method: "PATCH",
+      query: { id: `eq.${id}` },
+      body,
+    });
 
-const body = await request.json().catch(() => null);
-const { id } = await params;
-
-if (!body || Object.keys(body).length === 0) {
-return NextResponse.json({ error: “Nenhum campo para atualizar.” }, { status: 400 });
+    return NextResponse.json(updated);
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
 }
 
-try {
-const [updated] = await supabaseRest<Encomenda[]>(“encomendas_v2”, {
-method: “PATCH”,
-query: { id: `eq.${id}`, select: ENCOMENDA_SELECT },
-body,
-});
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const unauthorized = ensureApiAuth(request);
+  if (unauthorized) return unauthorized;
 
-```
-if (!updated) {
-  return NextResponse.json({ error: "Encomenda não encontrada." }, { status: 404 });
-}
+  const { id } = await params;
 
-return NextResponse.json(updated);
-```
+  try {
+    await supabaseRest<null>("encomendas_v2", {
+      method: "DELETE",
+      query: { id: `eq.${id}` },
+      prefer: "return=minimal",
+    });
 
-} catch (error) {
-return NextResponse.json({ error: (error as Error).message }, { status: 500 });
-}
-}
+    await insertAuditLog("encomenda_excluida", id, { deleted: true });
 
-export async function DELETE(
-request: NextRequest,
-{ params }: { params: Promise<{ id: string }> }
-) {
-const unauthorized = ensureApiAuth(request);
-if (unauthorized) return unauthorized;
-
-const { id } = await params;
-
-try {
-await supabaseRest<null>(“encomendas_v2”, {
-method: “DELETE”,
-query: { id: `eq.${id}` },
-prefer: “return=minimal”,
-});
-
-```
-await insertAuditLog("encomenda_excluida", id, { deleted: true });
-
-return NextResponse.json({ ok: true });
-```
-
-} catch (error) {
-return NextResponse.json({ error: (error as Error).message }, { status: 500 });
-}
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
 }
